@@ -30,7 +30,7 @@ export const TILE_PARAM: Record<TileType, 'league' | 'team' | 'player' | 'tourna
   player: 'player',
   transfers: 'transfers',
   czsk: 'none',
-  countdown: 'league',
+  countdown: 'league-optional',
 };
 
 export interface ValidationResult {

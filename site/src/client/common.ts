@@ -113,7 +113,7 @@ function initSpoilers(): void {
   syncSpoilerUi();
 }
 
-// ---------- rozbalení her, kola pavouku ----------
+// ---------- rozbalení her, přepínač soupisky ----------
 function initDelegates(): void {
   document.addEventListener('click', (e) => {
     const t = e.target as Element;
@@ -134,13 +134,6 @@ function initDelegates(): void {
       box?.querySelectorAll('[data-action="roster-tab"]').forEach((b) => b.setAttribute('aria-selected', String(b === rosterTab)));
       box?.querySelectorAll<HTMLElement>('[data-pane]').forEach((p) => (p.hidden = p.dataset.pane !== rosterTab.dataset.tab));
       return;
-    }
-    const tab = t.closest<HTMLButtonElement>('[data-action="round"]');
-    if (tab) {
-      const br = tab.closest('.bracket');
-      const idx = tab.dataset.round;
-      br?.querySelectorAll('.br-tab').forEach((b) => b.setAttribute('aria-selected', String(b === tab)));
-      br?.querySelectorAll<HTMLElement>('.br-round').forEach((r) => r.classList.toggle('is-active', r.dataset.round === idx));
     }
   });
 }

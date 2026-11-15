@@ -5,7 +5,7 @@ zápasy, výsledky, tabulky, soupisky a přestupy, postaví z nich statický web
 Žádný redaktor, žádná databáze, žádné PHP.
 
 - **Můj dashboard** (`/`): dlaždice, které si každý poskládá sám (Dnes, výsledky ligy, tabulka, soupiska týmu,
-  hráč, pavouk turnaje, přestupy, Češi a Slováci, odpočet). Ukládá se v prohlížeči, sdílí odkazem `#d=…`.
+  hráč, pavouk turnaje, přestupy, Češi a Slováci, starty lig). Ukládá se v prohlížeči, sdílí odkazem `#d=…`.
 - **Výsledky** (`/vysledky/`): vybrané ligy vedle sebe, tento týden / minulý týden / celý split, rozbalení her.
 - **Přestupy** (`/prestupy/`): potvrzené i neoficiální, filtr podle ligy a „jen Češi a Slováci“.
 - **Češi** (`/cesi/`): čeští a slovenští hráči ve světě.

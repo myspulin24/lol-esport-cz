@@ -74,7 +74,10 @@ jobs:
 
       # Chyba nasazení nesmí shodit běh (data se uloží a příští běh to zkusí znovu);
       # deploy-cli vypíše upozornění, které je vidět v přehledu běhu.
+      # Proměnná DEPLOY_PAUSED=1 nasazení přeskočí (data a build běží dál). Používá se, když se velká změna
+      # vzhledu nahrává z počítače, aby se dvě nasazení nepřetahovala o stejné soubory.
       - name: Nasadit na Forpsi
+        if: vars.DEPLOY_PAUSED != '1'
         continue-on-error: true
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}

@@ -1266,57 +1266,155 @@ main.wrap {
   height: 14px;
   top: -8px;
 }
-/* odpočet startu ligy: pruh s přejíždějícím leskem */
+/* starty lig: deska přes celou šířku, v ní karta pro každou ligu */
 .strip {
   position: relative;
-  overflow: hidden;
-  padding: var(--s3) var(--s4);
-  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
-  border-radius: var(--r);
-  background: linear-gradient(100deg, color-mix(in srgb, var(--accent) 16%, var(--surface)), var(--surface) 55%);
+  min-width: 0;
+  padding: var(--s4);
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--line));
+  border-radius: var(--r-lg);
+  background: linear-gradient(100deg, color-mix(in srgb, var(--accent) 12%, var(--surface)), var(--surface) 46%);
   box-shadow:
     inset 0 1px 0 var(--hi),
-    0 3px 0 var(--depth);
+    0 3px 0 var(--depth),
+    0 16px 26px -18px rgb(var(--shadow-rgb) / var(--shadow-a));
   animation: rise 0.75s var(--ease) backwards;
   animation-delay: calc(var(--i, 0) * 85ms - var(--t0, 0ms));
 }
-.strip::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(105deg, transparent 40%, var(--glare) 50%, transparent 60%);
-  translate: -100% 0;
-  animation: sheen 5.5s ease-in-out infinite;
-  animation-delay: calc(var(--clock, 0) * -1ms);
-}
-@keyframes sheen {
-  0%,
-  55% {
-    translate: -100% 0;
-  }
-  100% {
-    translate: 100% 0;
-  }
-}
-.cd {
-  margin: 0;
+.cd-head {
   display: flex;
-  flex-wrap: wrap;
   align-items: baseline;
-  gap: 6px var(--s3);
+  justify-content: space-between;
+  gap: var(--s3);
+  margin-bottom: var(--s3);
+}
+.cd-head h2 {
+  font-size: 0.92rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   color: var(--ink-2);
 }
-.cd strong {
+.cd-board {
+  display: grid;
+  gap: var(--s4);
+}
+.cd-group-name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 var(--s2);
+  font: 700 0.68rem var(--font-ui);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.cd-group-name::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--line-2), transparent);
+}
+.cd-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr));
+  gap: 10px;
+}
+/* pár vybraných lig: karty se roztáhnou přes celou šířku desky */
+.cd-cards--fit {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr));
+}
+.cd-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 10px 14px 10px 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px 4px 14px 4px;
+  background: linear-gradient(180deg, var(--surface-2), var(--surface));
+  box-shadow:
+    inset 0 1px 0 var(--hi),
+    0 2px 0 var(--depth);
+}
+.cd-card--soon {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+}
+.cd-card--running {
+  border-color: color-mix(in srgb, var(--mint) 60%, var(--line));
+}
+.cd-card--unknown .m-coin {
+  opacity: 0.7;
+}
+.cd-id {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.cd-league {
+  overflow-wrap: anywhere;
+  line-height: 1.2;
   font-family: var(--font-title);
-  font-size: 1.1rem;
+  font-weight: 700;
+  font-size: 1.02rem;
   letter-spacing: 0.06em;
-  color: var(--ink);
+  text-decoration: none;
+}
+.cd-league:hover {
+  color: var(--accent);
+}
+.cd-line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9rem;
+  color: var(--ink-2);
+}
+.cd-card--unknown .cd-line {
+  color: var(--ink-3);
+}
+.cd-sub {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 10px;
+  font-size: 0.78rem;
+  color: var(--ink-3);
 }
 .cd-ics {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   color: var(--ink-2);
+}
+/* vpravo: velké číslo dní, nebo stav */
+.cd-days {
+  display: grid;
+  justify-items: center;
+  line-height: 1;
+  color: var(--accent);
+}
+.cd-days b {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 2.1rem;
+  letter-spacing: 0.01em;
+}
+.cd-za,
+.cd-unit {
+  font: 700 0.62rem var(--font-ui);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.cd-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 700 0.62rem var(--font-ui);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mint);
 }
 
 /* ---------- řádek zápasu (D7): čas | tým – skóre – tým | Bo ---------- */
@@ -2015,14 +2113,7 @@ main.wrap {
   display: none;
 }
 
-/* ---------- pavouk (D22) ---------- */
-.br-tabs {
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  margin-bottom: var(--s3);
-}
-.br-tab,
+/* ---------- záložky a filtry (přepínače lig, filtry přestupů) ---------- */
 .res-tabs button,
 .filters a,
 .filters button {
@@ -2044,15 +2135,14 @@ main.wrap {
     border-color 0.2s,
     background 0.2s;
 }
-:is(.br-tab, .res-tabs button, .filters a, .filters button):hover {
+:is(.res-tabs button, .filters a, .filters button):hover {
   color: var(--ink);
   transform: translateY(-1px);
 }
-:is(.br-tab, .res-tabs button, .filters a, .filters button):active {
+:is(.res-tabs button, .filters a, .filters button):active {
   transform: translateY(2px);
   box-shadow: none;
 }
-.br-tab[aria-selected='true'],
 .res-tabs button[aria-selected='true'],
 .filters [aria-pressed='true'] {
   background: linear-gradient(180deg, var(--accent-hi), var(--accent));
@@ -2063,56 +2153,281 @@ main.wrap {
     0 2px 0 var(--accent-lo),
     0 8px 16px -8px color-mix(in srgb, var(--accent) 70%, transparent);
 }
+
+/* ---------- pavouk (D22) ----------
+   Sloupce kol vedle sebe, zápas je buňka o dvou řádcích (logo, kód, skóre). Sloupce se nikdy nemačkají pod
+   --bm-min: když se nevejdou, pavouk se posouvá do strany, text z buněk nepřetéká. */
+.bracket {
+  container: bracket / inline-size;
+  --bm-min: 104px;
+  --bm-max: 240px;
+  --br-gap: 22px;
+}
+.br-body {
+  display: grid;
+  gap: var(--s4);
+}
+.br-grid {
+  display: grid;
+  grid-auto-flow: column;
+  /* sloupec se roztáhne nejvýš na --bm-max: na široké stránce by jinak skóre ujelo daleko od kódu týmu */
+  grid-auto-columns: minmax(var(--bm-min), var(--bm-max));
+  column-gap: var(--br-gap);
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scrollbar-width: thin;
+}
+.br-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
 .br-name {
-  display: none;
+  margin: 0 0 var(--s2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 700 0.68rem var(--font-ui);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
 }
-.br-round {
-  display: none;
-  container: mlist / inline-size;
+/* řádky stejně vysoké a buňka uprostřed: zápas dalšího kola tak sedí přesně mezi dvojicí, ze které vzešel */
+.br-cells,
+.br-pair {
+  display: grid;
+  grid-auto-rows: 1fr;
+  align-items: center;
 }
-.br-round.is-active {
-  display: block;
+.br-cells {
+  flex: 1;
 }
-.br-round .match {
-  margin-bottom: 8px;
-  padding: 8px 10px;
+.br-pair {
+  position: relative;
+  align-self: stretch;
+}
+.bm {
+  position: relative;
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  margin: 5px 0;
+  padding: 7px 9px;
   border: 1px solid var(--line);
-  border-radius: var(--r);
-  background: color-mix(in srgb, var(--surface-2) 55%, transparent);
+  border-radius: 10px 3px 10px 3px;
+  background: linear-gradient(180deg, var(--surface-2), var(--surface));
+  color: inherit;
+  text-decoration: none;
   box-shadow:
     inset 0 1px 0 var(--hi),
     0 2px 0 var(--depth);
+  transition:
+    border-color 0.2s,
+    translate 0.2s var(--ease),
+    box-shadow 0.2s;
 }
-@media (min-width: 900px) {
-  .br-tabs {
-    display: none;
+a.bm:hover {
+  translate: 0 -2px;
+  border-color: var(--accent);
+  box-shadow:
+    inset 0 1px 0 var(--hi),
+    0 4px 0 var(--depth),
+    0 0 16px -6px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+.bm.is-live {
+  border-color: var(--accent);
+}
+.bm-team {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--ink-2);
+}
+.bm-id {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+.bm .m-coin {
+  width: 22px;
+  height: 22px;
+}
+.bm .m-coin img {
+  width: 17px;
+  height: 17px;
+}
+.bm-code {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.02rem;
+  letter-spacing: 0.03em;
+}
+.bm-code--tbd {
+  font: 400 0.8rem var(--font-ui);
+  letter-spacing: 0;
+  color: var(--ink-3);
+}
+.bm-sp {
+  position: relative;
+  flex: none;
+  min-width: 1.1rem;
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.08rem;
+}
+.bm-team.win {
+  color: var(--ink);
+}
+.bm-team.win .bm-code,
+.bm-team.win .bm-sp {
+  font-weight: 700;
+}
+.bm-team.win .bm-sp {
+  color: var(--accent);
+}
+.bm.is-final .bm-team:not(.win) .m-coin {
+  opacity: 0.55;
+  filter: grayscale(0.5);
+}
+.bm-when {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.72rem;
+  color: var(--ink-3);
+}
+.bm-when--live {
+  color: var(--accent);
+  font-weight: 600;
+}
+/* spojnice: z buňky ke středu mezery, dvojice se spojí svislou čarou, další kolo navazuje vodorovnou */
+.br-pair::after,
+.br-col--straight .bm::after,
+.br-col.has-prev .bm::before {
+  content: '';
+  position: absolute;
+  width: calc(var(--br-gap) / 2);
+  border: 0 solid var(--line-2);
+  pointer-events: none;
+}
+.br-pair::after {
+  left: 100%;
+  top: 25%;
+  bottom: 25%;
+  border-width: 1px 1px 1px 0;
+  border-radius: 0 5px 5px 0;
+}
+.br-col--straight .bm::after {
+  left: 100%;
+  top: 50%;
+  border-top-width: 1px;
+}
+.br-col.has-prev .bm::before {
+  right: 100%;
+  top: 50%;
+  border-top-width: 1px;
+}
+/* na dvě prohry: horní a dolní pavouk pod sebou, velké finále pod nimi, v širokém místě vpravo vedle nich */
+.br-part {
+  min-width: 0;
+}
+.br-part-name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 var(--s2);
+  font-family: var(--font-title);
+  font-size: 0.86rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.br-part-name::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--line-2), transparent);
+}
+.br-final {
+  max-width: 300px;
+}
+.br-final .bm {
+  padding: 10px 12px;
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  box-shadow:
+    inset 0 1px 0 var(--hi),
+    0 3px 0 var(--depth),
+    0 0 22px -10px color-mix(in srgb, var(--accent) 80%, transparent);
+}
+.br-final .bm-code {
+  font-size: 1.2rem;
+}
+.br-final .bm-sp {
+  font-size: 1.3rem;
+}
+/* úzké místo (telefon): menší loga a mezery, aby se tři kola vešla vedle sebe bez posouvání */
+@container bracket (max-width: 420px) {
+  .br-grid {
+    --bm-min: 96px;
+    --br-gap: 14px;
   }
-  .br-rounds {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(0, 1fr);
-    align-items: center;
-    gap: var(--s5);
+  .bm {
+    padding: 6px 7px;
   }
-  .br-round {
-    display: block;
+  .bm-team,
+  .bm-id {
+    gap: 5px;
   }
-  .br-name {
-    display: block;
-    margin-bottom: var(--s2);
-    font-size: 0.72rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--ink-2);
+  .bm .m-coin {
+    width: 18px;
+    height: 18px;
   }
-  .br-round .m-meta,
-  .br-round .m-expand,
-  .br-round .m-bo {
-    display: none;
+  .bm .m-coin img {
+    width: 14px;
+    height: 14px;
   }
-  .br-round .m-main {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: 'vs';
+  .bm-code {
+    font-size: 0.95rem;
+  }
+  .bm-sp {
+    min-width: 0.8rem;
+    font-size: 1rem;
+  }
+}
+@container bracket (min-width: 760px) {
+  .bracket--double .br-body {
+    grid-template-columns: minmax(0, max-content) minmax(190px, 260px);
+    justify-content: start;
+    grid-template-areas:
+      'upper final'
+      'lower final';
+    column-gap: var(--s5);
+  }
+  .br-part--upper {
+    grid-area: upper;
+  }
+  .br-part--lower {
+    grid-area: lower;
+  }
+  .br-part--final {
+    grid-area: final;
+    align-self: center;
+  }
+  .br-final {
+    max-width: none;
   }
 }
 
@@ -2150,6 +2465,32 @@ html.spoilers [data-spoiler]:not(.revealed) .sp-name::after {
   display: grid;
   place-items: center;
   color: var(--ink-3);
+}
+/* pavouk: skóre je otazník, na který se dá kliknout; vítěz se ničím neprozradí */
+html.spoilers .bm[data-spoiler]:not(.revealed) .sp-name .bm-code {
+  visibility: hidden;
+}
+html.spoilers .bm[data-spoiler]:not(.revealed) .bm-sp {
+  cursor: var(--cur-go);
+}
+html.spoilers .bm[data-spoiler]:not(.revealed) .bm-sp::after {
+  content: '?';
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--ink-3);
+}
+html.spoilers .bm[data-spoiler]:not(.revealed) .bm-team {
+  color: var(--ink-2);
+}
+html.spoilers .bm[data-spoiler]:not(.revealed) .bm-team :is(.bm-code, .bm-sp) {
+  font-weight: 600;
+  color: inherit;
+}
+html.spoilers .bm[data-spoiler]:not(.revealed) .bm-team .m-coin {
+  opacity: 1;
+  filter: none;
 }
 html.spoilers [data-spoiler]:not(.revealed) .m-team a,
 html.spoilers [data-spoiler]:not(.revealed) .m-team > span:not(.m-coin) {
@@ -2231,6 +2572,39 @@ html.spoilers [data-spoiler].revealed .m-status .sp {
   background: var(--inset);
   padding: 0 9px;
   max-width: 16rem;
+}
+/* výběr týmu / hráče v dlaždici: pole a pod ním nabídka ve stylu hledání v hlavičce */
+.pick {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+}
+.pick-input {
+  width: 15rem;
+}
+.pick .pick-panel {
+  width: min(21rem, calc(100vw - 70px));
+  max-height: min(60vh, 22rem);
+}
+.pick-panel .sr-item {
+  width: 100%;
+  grid-template-columns: 30px minmax(0, 1fr);
+  border-top: 0;
+  border-right: 0;
+  border-bottom: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: var(--cur-go);
+}
+.pick-panel .sr-item:hover,
+.pick-panel .sr-item.is-active {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+}
+/* dlaždice s otevřenou nabídkou musí být nad sousedními, jinak by nabídku překryly */
+.dash > :has(.pick-panel:not([hidden])) {
+  z-index: 30;
 }
 .catalog {
   position: fixed;
@@ -2509,10 +2883,68 @@ html.spoilers [data-spoiler].revealed .m-status .sp {
   height: 1px;
   background: linear-gradient(90deg, var(--line-2), transparent);
 }
-.res-col .last-note {
+/* ligy, které ve zvoleném období nehrály: jen jména pod přehledem, žádné starší zápasy */
+.res-quiet {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: var(--s6) 0 0;
+  padding-top: var(--s4);
+  border-top: 1px solid var(--line);
+}
+.res-quiet-label {
+  margin-right: 6px;
+  font: 700 0.68rem var(--font-ui);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   color: var(--ink-3);
+}
+.res-quiet-league {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 11px 3px 4px;
+  border: 1px solid var(--line);
+  border-radius: 14px 4px 14px 4px;
+  background: var(--inset);
+  color: var(--ink-2);
   font-size: 0.86rem;
-  margin: 0 0 var(--s2);
+  text-decoration: none;
+  transition:
+    color 0.2s,
+    border-color 0.2s;
+}
+.res-quiet-league:hover {
+  color: var(--ink);
+  border-color: var(--accent);
+}
+.res-quiet-league .m-coin {
+  opacity: 0.75;
+}
+/* ve zvoleném období nehrála žádná z vybraných lig */
+.res-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s7) var(--s5);
+  text-align: center;
+}
+.res-empty-text {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.3rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-2);
+}
+.res-empty-acts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin: 0;
 }
 .sheet-btn {
   display: inline-flex;
@@ -3102,6 +3534,7 @@ html.spoilers .spoil-box:not(.revealed) .sp-reveal {
 }
 .game {
   container: game / inline-size;
+  --g-mid: 4rem;
   scroll-margin-top: 80px;
 }
 .game--ab {
@@ -3179,17 +3612,25 @@ html.spoilers .spoil-box:not(.revealed) .sp-reveal {
 }
 .g-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto 3.8rem auto minmax(0, 1fr);
-  grid-template-areas: 'pa ca role cb pb';
+  grid-template-columns: minmax(0, 1fr) var(--g-mid) minmax(0, 1fr);
   align-items: center;
-  gap: 1px 10px;
-  padding: 6px 0;
+  column-gap: 14px;
+  padding: 7px 0;
   border-top: 1px solid color-mix(in srgb, var(--line) 65%, transparent);
 }
 .g-row:first-child {
   border-top: 0;
 }
+/* půlka řádku: hráč u vnějšího okraje karty, šampion u středu */
+.g-half {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
 .g-player {
+  flex: 0 999 auto;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -3200,29 +3641,31 @@ html.spoilers .spoil-box:not(.revealed) .sp-reveal {
 .g-player a {
   color: inherit;
 }
-.g-player--a {
-  grid-area: pa;
+.g-pname {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.g-player--b {
-  grid-area: pb;
-  justify-self: end;
+.g-player .flag {
+  flex: none;
+  align-self: center;
+}
+.g-half--b .g-player {
   flex-direction: row-reverse;
 }
 .g-champ {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 1.08rem;
   letter-spacing: 0.02em;
 }
-.g-champ--a {
-  grid-area: ca;
-  text-align: right;
-}
-.g-champ--b {
-  grid-area: cb;
-}
 .g-role {
-  grid-area: role;
   text-align: center;
   font-size: 0.66rem;
   font-weight: 600;
@@ -3230,25 +3673,25 @@ html.spoilers .spoil-box:not(.revealed) .sp-reveal {
   text-transform: uppercase;
   color: var(--ink-3);
 }
+/* úzká karta: šampion nahoře, hráč pod ním, obojí u vnějšího okraje; pozice zůstává uprostřed */
 @container game (max-width: 470px) {
-  .g-row {
-    grid-template-columns: minmax(0, 1fr) 3.4rem minmax(0, 1fr);
-    grid-template-areas:
-      'ca role cb'
-      'pa role pb';
+  .g-half {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
   }
-  .g-champ--a {
-    text-align: left;
+  .g-half--a {
+    flex-direction: column-reverse;
   }
-  .g-champ--b {
-    text-align: right;
+  .g-half--b {
+    align-items: flex-end;
   }
 }
 .g-bans {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 3.8rem minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) var(--g-mid) minmax(0, 1fr);
   align-items: center;
-  gap: 10px;
+  gap: 14px;
   margin-bottom: var(--s4);
   padding-top: var(--s2);
   border-top: 1px solid var(--line);

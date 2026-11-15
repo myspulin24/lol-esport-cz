@@ -2,12 +2,14 @@
 import Base from '../layouts/Base.astro';
 import VNode from '../components/VNode.astro';
 import { loadData } from '../lib/data';
-import { resultsView, PERIOD_LABEL, type Period } from '../../../shared/results';
+import { firstPlayedPeriod, resultsView, PERIOD_LABEL, type Period } from '../../../shared/results';
 import { DEFAULT_RESULTS_LEAGUES, TRACKED_LEAGUES } from '../../../shared/leagues';
 import { icon } from '../../../shared/icons';
 
 const data = loadData();
-const nodes = resultsView(DEFAULT_RESULTS_LEAGUES, 'week', data);
+// Výchozí období = první, ve kterém se ve výchozích ligách hrálo (mimo sezónu by „Tento týden“ byl prázdný).
+const shown = firstPlayedPeriod(DEFAULT_RESULTS_LEAGUES, data.schedule, data.now);
+const nodes = resultsView(DEFAULT_RESULTS_LEAGUES, shown, data);
 const periods = Object.entries(PERIOD_LABEL) as Array<[Period, string]>;
 const picker = TRACKED_LEAGUES.map((l) => ({ slug: l.slug, name: l.name, checked: DEFAULT_RESULTS_LEAGUES.includes(l.slug) }));
 ---
@@ -22,7 +24,7 @@ const picker = TRACKED_LEAGUES.map((l) => ({ slug: l.slug, name: l.name, checked
       {picker.map((l) => <label><input type="checkbox" value={l.slug} data-league-box checked={l.checked} />{l.name}</label>)}
     </fieldset>
     <div class="seg" role="group" aria-label="Období">
-      {periods.map(([k, label]) => <button type="button" data-period={k} aria-pressed={k === 'week' ? 'true' : 'false'}>{label}</button>)}
+      {periods.map(([k, label]) => <button type="button" data-period={k} aria-pressed={k === shown ? 'true' : 'false'}>{label}</button>)}
     </div>
   </div>
   <div data-results>

@@ -18,6 +18,11 @@ Bez výslovného pokynu necommitovat, nepushovat a nenasazovat.
   deploy na ně nesmí sáhnout (hlídá to `ALLOWED_TARGETS` v `pipeline/deploy.ts`).
 - Přístupy k FTP jsou jen v GitHub Secrets (`FTP_HOST`, `FTP_USER`, `FTP_PASSWORD`), nikdy v repozitáři.
 - Před zásahem na server nejdřív `npm run deploy -- --check` (jen čte).
+- Změna stylu nebo skriptu přejmenuje soubory v `_astro/`, takže se znovu nahrává každá stránka (~2 000 souborů).
+  Z GitHubu to jde po ~300 za běh; po takové změně je rychlejší nahrát web z počítače:
+  `gh variable set DEPLOY_PAUSED --body 1` (běhy na GitHubu pak nasazení přeskočí), počkat, až doběhne rozběhnutý běh,
+  `git fetch origin data && git archive FETCH_HEAD | tar -x -C cache`, `npm run data && npm run build`,
+  `npm run deploy -- --check`, `npm run deploy` opakovat do „zbývá 0“ a nakonec `gh variable delete DEPLOY_PAUSED`.
 - Do větve `data` zapisuje jen automatický běh (robot). Ručně do ní nepushovat a nezakládat z ní pull request:
   jsou v ní jen uložená data, ne kód, a po ručním pushi GitHub majiteli ukazuje výzvu „Compare & pull request“.
 - Texty webu jsou česky. Vzhled a pravidla animací drží `DESIGN.md`; při změně vzhledu ho aktualizovat.

@@ -135,6 +135,8 @@ export interface CzSkPlayer {
 export interface BracketRound {
   name: string;
   matches: Match[];
+  /** Play-off na dvě prohry: horní pavouk, dolní pavouk, velké finále. U vyřazovacího pavouka chybí. */
+  part?: 'upper' | 'lower' | 'final';
 }
 
 export interface Bracket {
@@ -151,7 +153,12 @@ export interface LeagueInfo {
   group: 'major' | 'regional' | 'international';
   image?: string;
   currentTournament?: string;
+  /** poslední začatý turnaj (běží, nebo už skončil): název a data YYYY-MM-DD */
+  currentName?: string;
+  currentStart?: string;
+  currentEnd?: string;
   nextStart?: string; // YYYY-MM-DD, pokud je známý
+  nextName?: string;
 }
 
 export type SourceKey = 'lolesports' | 'leaguepedia';

@@ -7,6 +7,8 @@ export type HitKind = 'team' | 'league' | 'tournament' | 'player';
 
 export interface SearchItem {
   kind: HitKind;
+  /** ID v katalogu (slug týmu, hráče, ligy, turnaje) */
+  id: string;
   label: string;
   /** druhý řádek: liga, tým, region */
   sub: string;
@@ -43,18 +45,19 @@ export function buildIndex(catalog: Catalog): SearchItem[] {
     ...catalog.teams.map((t): SearchItem => {
       const name = teamName(t.label);
       const code = t.code ?? t.label.match(/\(([^)]+)\)\s*$/)?.[1] ?? '';
-      return { kind: 'team', label: name, sub: [code, t.group].filter(Boolean).join(' · '), href: `/tym/${t.id}/`, image: t.image, name: normText(name), code: normText(code), extra: [] };
+      return { kind: 'team', id: t.id, label: name, sub: [code, t.group].filter(Boolean).join(' · '), href: `/tym/${t.id}/`, image: t.image, name: normText(name), code: normText(code), extra: [] };
     }),
     ...catalog.leagues.map(
-      (l): SearchItem => ({ kind: 'league', label: l.label, sub: l.group ?? '', href: `/liga/${leagueShort(l.id)}/`, image: l.image, name: normText(l.label), code: normText(leagueShort(l.id)), extra: [normText(l.group ?? '')] }),
+      (l): SearchItem => ({ kind: 'league', id: l.id, label: l.label, sub: l.group ?? '', href: `/liga/${leagueShort(l.id)}/`, image: l.image, name: normText(l.label), code: normText(leagueShort(l.id)), extra: [normText(l.group ?? '')] }),
     ),
     ...catalog.tournaments.map(
-      (t): SearchItem => ({ kind: 'tournament', label: t.label, sub: 'pavouk a výsledky', href: `/turnaj/${t.id}/`, name: normText(t.label), code: '', extra: [] }),
+      (t): SearchItem => ({ kind: 'tournament', id: t.id, label: t.label, sub: 'pavouk a výsledky', href: `/turnaj/${t.id}/`, name: normText(t.label), code: '', extra: [] }),
     ),
     ...catalog.players.map((p): SearchItem => {
       const team = p.team ? teamById.get(p.team) : undefined;
       return {
         kind: 'player',
+        id: p.id,
         label: p.label,
         sub: [p.group, p.league ? leagueName(p.league) : ''].filter(Boolean).join(' · '),
         href: `/hrac/${p.id}/`,

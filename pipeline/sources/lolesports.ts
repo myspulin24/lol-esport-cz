@@ -82,7 +82,11 @@ export async function fetchLolesports(now: Date, fetchImpl?: typeof fetch): Prom
       group: tracked.group,
       image: imageUrl(raw.image),
       currentTournament: current?.slug,
+      currentName: current ? tournamentName(tracked.name, current.slug) : undefined,
+      currentStart: current?.startDate,
+      currentEnd: current?.endDate,
       nextStart: upcoming?.startDate,
+      nextName: upcoming ? tournamentName(tracked.name, upcoming.slug) : undefined,
     });
 
     // Rozpis: nejnovější stránka + jedna starší (pokryje celý split).
@@ -221,11 +225,14 @@ function dedupeMatches(ms: Match[]): Match[] {
 
 const ROUND_NAMES: Record<number, string> = { 1: 'Finále', 2: 'Semifinále', 4: 'Čtvrtfinále', 8: 'Osmifinále' };
 
-/** Rozdělí zápasy play-off do kol podle počtu (4 + 2 + 1 = 7). Jiné počty → jedno kolo. */
+/**
+ * Rozdělí zápasy play-off do kol. Vyřazovací pavouk se pozná podle počtu (4 + 2 + 1 = 7),
+ * play-off na dvě prohry (MSI: 14 zápasů) se odvodí z výsledků. Cokoli jiného je jedno kolo.
+ */
 export function toRounds(ms: Match[]): BracketRound[] {
   const n = ms.length;
   const k = Math.log2(n + 1);
-  if (!Number.isInteger(k) || k < 1) return [{ name: 'Zápasy', matches: ms }];
+  if (!Number.isInteger(k) || k < 1) return toDoubleElimination(ms) ?? [{ name: 'Zápasy', matches: ms }];
   const rounds: BracketRound[] = [];
   let offset = 0;
   for (let size = 2 ** (k - 1); size >= 1; size /= 2) {
@@ -235,6 +242,92 @@ export function toRounds(ms: Match[]): BracketRound[] {
   return rounds;
 }
 
+type Slot = { part: 'upper' | 'lower' | 'final'; round: number };
+
+/**
+ * Play-off na dvě prohry pro T týmů (T = 4, 8, 16 → 6, 14, 30 zápasů). Lolesports u zápasů neříká, do kterého kola
+ * patří, a jejich pořadí se mezi ročníky liší, proto se kolo odvozuje z toho, kolikrát už týmy prohrály:
+ * oba bez prohry = horní pavouk, oba s jednou = dolní pavouk, jeden a jeden = velké finále.
+ * Zápasy, u kterých týmy ještě nejsou známé, zaplní zbylá místa v obvyklém pořadí.
+ * Vrací null, když zápasy tomuto formátu neodpovídají.
+ */
+export function toDoubleElimination(ms: Match[]): BracketRound[] | null {
+  const teams = (ms.length + 2) / 2;
+  const K = Math.log2(teams);
+  if (!Number.isInteger(K) || K < 2) return null;
+  const lowerRounds = 2 * (K - 1);
+  const capacity = (s: Slot) => (s.part === 'final' ? 1 : s.part === 'upper' ? teams / 2 ** s.round : teams / 2 ** (Math.ceil(s.round / 2) + 1));
+  const key = (s: Slot) => `${s.part}:${s.round}`;
+  const placed = new Map<string, Match[]>();
+  const put = (s: Slot, m: Match): boolean => {
+    const list = placed.get(key(s)) ?? [];
+    if (list.length >= capacity(s)) return false;
+    list.push(m);
+    placed.set(key(s), list);
+    return true;
+  };
+
+  const known = (m: Match) => m.teams.every((t) => t.code && t.code !== 'TBD');
+  const timed = ms.every((m) => m.startTime);
+  const order = ms.map((m, i) => ({ m, i })).sort((a, b) => (timed ? a.m.startTime.localeCompare(b.m.startTime) : 0) || a.i - b.i);
+  const losses = new Map<string, number>();
+  const upperPlayed = new Map<string, number>();
+  const lowerLast = new Map<string, number>();
+  const droppedFrom = new Map<string, number>();
+  const pending: Array<{ m: Match; i: number }> = [];
+  for (const { m, i } of order) {
+    if (!known(m)) {
+      pending.push({ m, i });
+      continue;
+    }
+    const [a, b] = m.teams.map((t) => t.code);
+    const la = losses.get(a) ?? 0;
+    const lb = losses.get(b) ?? 0;
+    let slot: Slot;
+    if (la === 0 && lb === 0) slot = { part: 'upper', round: Math.max(upperPlayed.get(a) ?? 0, upperPlayed.get(b) ?? 0) + 1 };
+    else if (la === 1 && lb === 1) {
+      // do dolního pavouka se z 1. kola horního padá do 1. kola, z r-tého do kola 2(r − 1)
+      const next = (c: string) => (lowerLast.has(c) ? lowerLast.get(c)! + 1 : (droppedFrom.get(c) ?? 1) === 1 ? 1 : 2 * ((droppedFrom.get(c) ?? 1) - 1));
+      slot = { part: 'lower', round: Math.max(next(a), next(b)) };
+    } else if (la + lb === 1) slot = { part: 'final', round: 1 };
+    else return null;
+    if ((slot.part === 'upper' && slot.round > K) || (slot.part === 'lower' && slot.round > lowerRounds) || !put(slot, m)) return null;
+    if (slot.part === 'upper') for (const c of [a, b]) upperPlayed.set(c, slot.round);
+    if (slot.part === 'lower') for (const c of [a, b]) lowerLast.set(c, slot.round);
+    const loser = m.teams.find((t) => t.outcome === 'loss')?.code;
+    if (m.state === 'completed' && loser) {
+      losses.set(loser, (losses.get(loser) ?? 0) + 1);
+      if (slot.part === 'upper') droppedFrom.set(loser, slot.round);
+    }
+  }
+
+  // Obvyklé pořadí kol v čase: H1, H2, D1, H3, D2, D3, …, poslední kolo dolního pavouka, velké finále.
+  const usual: Slot[] = [{ part: 'upper', round: 1 }];
+  for (let r = 2; r <= K; r++) {
+    usual.push({ part: 'upper', round: r });
+    if (2 * r - 4 >= 1) usual.push({ part: 'lower', round: 2 * r - 4 });
+    usual.push({ part: 'lower', round: 2 * r - 3 });
+  }
+  usual.push({ part: 'lower', round: lowerRounds }, { part: 'final', round: 1 });
+  for (const { m } of pending.sort((a, b) => a.i - b.i)) {
+    const free = usual.find((s) => (placed.get(key(s))?.length ?? 0) < capacity(s));
+    if (!free || !put(free, m)) return null;
+  }
+
+  const rounds: BracketRound[] = [];
+  const add = (part: Slot['part'], count: number) => {
+    for (let r = 1; r <= count; r++) {
+      // uvnitř kola v pořadí ze zdroje: sousední zápasy vedou do stejného zápasu dalšího kola
+      const list = (placed.get(key({ part, round: r })) ?? []).sort((x, y) => ms.indexOf(x) - ms.indexOf(y));
+      if (!list.length) continue;
+      rounds.push({ name: part === 'final' ? 'Velké finále' : r === count ? 'Finále' : `${r}. kolo`, part, matches: list });
+    }
+  };
+  add('upper', K);
+  add('lower', lowerRounds);
+  add('final', 1);
+  return rounds;
+}
 
 function assignPlayerSlugs(teams: Team[]): void {
   const used = new Map<string, number>();

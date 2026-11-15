@@ -103,7 +103,7 @@ export function gameCard(g: GameDetail, m: Match, players: Map<string, KnownPlay
   const player = (name: string | undefined): Child[] => {
     if (!name) return [];
     const known = players.get(name.toLowerCase());
-    return [known ? h('a', { href: `/hrac/${known.slug}/` }, name) : name, flag(known?.country)];
+    return [h('span', { class: 'g-pname' }, known ? h('a', { href: `/hrac/${known.slug}/` }, name) : name), flag(known?.country)];
   };
   const lineup = h(
     'ul',
@@ -112,11 +112,11 @@ export function gameCard(g: GameDetail, m: Match, players: Map<string, KnownPlay
       h(
         'li',
         { class: 'g-row' },
-        h('span', { class: 'g-player g-player--a' }, ...player(left.players[i])),
-        h('span', { class: 'g-champ g-champ--a' }, left.picks[i] ?? '–'),
+        // Tři díly: levá půlka, pozice přesně uprostřed, pravá půlka. Obě půlky jsou stejně široké, takže pozice
+        // jsou ve všech řádcích pod sebou a šampioni k nim přiléhají zleva i zprava se stejným odstupem.
+        h('span', { class: 'g-half g-half--a' }, h('span', { class: 'g-player' }, ...player(left.players[i])), h('span', { class: 'g-champ' }, left.picks[i] ?? '–')),
         h('span', { class: 'g-role' }, role),
-        h('span', { class: 'g-champ g-champ--b' }, right.picks[i] ?? '–'),
-        h('span', { class: 'g-player g-player--b' }, ...player(right.players[i])),
+        h('span', { class: 'g-half g-half--b' }, h('span', { class: 'g-champ' }, right.picks[i] ?? '–'), h('span', { class: 'g-player' }, ...player(right.players[i]))),
       ),
     ),
   );

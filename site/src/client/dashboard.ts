@@ -2,10 +2,11 @@
 
 import type { Bracket, Catalog, CzSkPlayer, LeagueInfo, Match, Meta, Standings, Team, Transfer } from '../../../shared/types';
 import { decodeConfig, encodeConfig, TILE_PARAM, TILE_TYPES, validateConfig, type DashboardConfig, type TileConfig, type TileType } from '../../../shared/dashboard-schema';
-import { defaultTiles, renderDashboard, TILE_LABEL, type RenderData, type Streamer } from '../../../shared/render';
+import { coin, defaultTiles, flag, renderDashboard, TILE_LABEL, type RenderData, type Streamer } from '../../../shared/render';
+import { buildIndex, findHits, splitMatch, type SearchItem } from '../../../shared/search';
 import { isInSeason, seasonSwitch } from '../../../shared/season';
 import { TRACKED_LEAGUES, leagueShort } from '../../../shared/leagues';
-import { h, mount, toDom, type VNode } from '../../../shared/vnode';
+import { h, mount, toDom, type Child, type VNode } from '../../../shared/vnode';
 import { icon } from '../../../shared/icons';
 import { getJson, getMeta } from './data';
 import { refreshFreshness, spoilersOn } from './common';
@@ -27,7 +28,7 @@ const TILE_HELP: Record<TileType, string> = {
   player: 'Tým, role a příští zápas hráče',
   transfers: 'Potvrzené přestupy a drby',
   czsk: 'Čeští a slovenští hráči ve světě',
-  countdown: 'Kolik dní zbývá do startu ligy',
+  countdown: 'Kdy začíná která liga a kolik dní zbývá',
 };
 
 interface State {
@@ -171,7 +172,7 @@ async function render(): Promise<void> {
   const el = document.querySelector<HTMLElement>('[data-dash]');
   if (!el) return;
   const data = await renderData(st.tiles);
-  const nodes = renderDashboard(st.tiles, data);
+  const nodes = renderDashboard(st.tiles, data, { separate: st.editing });
   if (st.editing) {
     nodes.forEach((n) => n.children.unshift(editControls(n, data)));
   }
@@ -224,17 +225,151 @@ function paramPicker(t: TileConfig, i: number, cat: Catalog): VNode | null {
   if (need === 'tournament') {
     return h('span', null, label('Turnaj'), h('select', { id, 'data-action': 'tile-param', 'data-i': i }, ...cat.tournaments.map((x) => h('option', { value: x.id, selected: x.id === t.p }, x.label))));
   }
-  // tým / hráč: vyhledávání se seskupením podle ligy (D20)
+  // tým / hráč: pole s vlastní nabídkou (D20). Po kliknutí se nabídka otevře a psaním se v ní hledá.
   const list = need === 'team' ? cat.teams : cat.players;
-  const current = list.find((x) => x.id === t.p);
-  const show = (x: Catalog['teams'][number]) => (need === 'team' ? `${x.label} — ${x.group}` : `${x.label} (${x.group}) — ${TRACKED_LEAGUES.find((l) => l.slug === x.league)?.name ?? ''}`);
+  const current = list.find((x) => x.id === t.p)?.label ?? '';
   return h(
     'span',
-    null,
+    { class: 'pick', 'data-pick': need, 'data-i': i },
     label(need === 'team' ? 'Hledat tým' : 'Hledat hráče'),
-    h('input', { id, type: 'search', list: `${id}-list`, value: current ? show(current) : '', placeholder: need === 'team' ? 'Hledat tým' : 'Hledat hráče', 'data-action': 'tile-param-search', 'data-i': i, 'data-kind': need, autocomplete: 'off' }),
-    h('datalist', { id: `${id}-list` }, ...[...list].sort((a, b) => (a.group ?? '').localeCompare(b.group ?? '') || a.label.localeCompare(b.label)).map((x) => h('option', { value: show(x) }))),
+    h('input', {
+      id,
+      class: 'pick-input',
+      type: 'text',
+      role: 'combobox',
+      'aria-expanded': 'false',
+      'aria-controls': `${id}-list`,
+      'aria-autocomplete': 'list',
+      autocomplete: 'off',
+      spellcheck: 'false',
+      value: current,
+      'data-current': current,
+      placeholder: need === 'team' ? 'Hledat tým' : 'Hledat hráče',
+    }),
+    h('div', { class: 'search-panel pick-panel', id: `${id}-list`, role: 'listbox', hidden: true }),
   );
+}
+
+// ---------- výběr týmu / hráče v dlaždici ----------
+let pickIndex: SearchItem[] | undefined;
+const PICK_LIMIT = 12;
+
+function pickRow(item: SearchItem, query: string, id: string): VNode {
+  const [before, match, after] = splitMatch(item.label, query);
+  const ic: Child = item.kind === 'player' ? (item.country ? flag(item.country) : h('span', { class: 'sr-dot', 'aria-hidden': 'true' })) : coin(item.image);
+  return h(
+    'button',
+    { type: 'button', class: 'sr-item', role: 'option', 'aria-selected': 'false', id, 'data-action': 'pick', 'data-id': item.id, tabindex: -1 },
+    h('span', { class: 'sr-ic' }, ic),
+    h('span', { class: 'sr-main' }, h('span', { class: 'sr-label' }, before, match ? h('span', { class: 'sr-hl' }, match) : null, after), item.sub ? h('span', { class: 'sr-sub' }, item.sub) : null),
+  );
+}
+
+/** Naplní nabídku: bez textu všechny týmy po ligách (u hráčů nápověda), s textem nejlepší shody. */
+function pickRender(input: HTMLInputElement, query: string): void {
+  const box = input.closest<HTMLElement>('.pick');
+  const panel = box?.querySelector<HTMLElement>('.pick-panel');
+  if (!box || !panel) return;
+  const kind = box.dataset.pick === 'team' ? 'team' : 'player';
+  pickIndex ??= buildIndex(st.catalog);
+  const items = pickIndex.filter((x) => x.kind === kind);
+  const q = query.trim();
+  const nodes: Child[] = [];
+  let n = 0;
+  const row = (item: SearchItem) => pickRow(item, q, `${panel.id}-o${n++}`);
+  if (!q && kind === 'team') {
+    const league = new Map(st.catalog.teams.map((x) => [x.id, x.league]));
+    for (const l of TRACKED_LEAGUES) {
+      const group = items.filter((x) => league.get(x.id) === l.slug).sort((a, b) => a.label.localeCompare(b.label, 'cs'));
+      if (!group.length) continue;
+      nodes.push(h('p', { class: 'menu-h' }, l.name), ...group.map(row));
+    }
+  } else if (!q) {
+    nodes.push(h('p', { class: 'sr-empty' }, 'Začni psát přezdívku hráče nebo kód týmu (třeba G2).'));
+  } else {
+    const hits = findHits(items, q, PICK_LIMIT);
+    if (hits.length) nodes.push(...hits.map(row));
+    else nodes.push(h('p', { class: 'sr-empty' }, kind === 'team' ? 'Žádný tým neodpovídá. Zkus kód (třeba G2).' : 'Žádný hráč neodpovídá. Zkus přezdívku nebo kód týmu.'));
+  }
+  mount(panel, nodes);
+  panel.hidden = false;
+  panel.scrollTop = 0;
+  input.setAttribute('aria-expanded', 'true');
+  input.removeAttribute('aria-activedescendant');
+}
+
+function pickClose(input: HTMLInputElement, restore = true): void {
+  const panel = input.closest('.pick')?.querySelector<HTMLElement>('.pick-panel');
+  if (panel) panel.hidden = true;
+  input.setAttribute('aria-expanded', 'false');
+  input.removeAttribute('aria-activedescendant');
+  if (restore) input.value = input.dataset.current ?? '';
+}
+
+function pickMove(input: HTMLInputElement, step: number): void {
+  const opts = [...(input.closest('.pick')?.querySelectorAll<HTMLElement>('.sr-item') ?? [])];
+  if (!opts.length) return;
+  const cur = opts.findIndex((o) => o.classList.contains('is-active'));
+  const next = cur < 0 ? (step > 0 ? 0 : opts.length - 1) : (cur + step + opts.length) % opts.length;
+  opts.forEach((o, k) => {
+    o.classList.toggle('is-active', k === next);
+    o.setAttribute('aria-selected', String(k === next));
+  });
+  input.setAttribute('aria-activedescendant', opts[next].id);
+  opts[next].scrollIntoView({ block: 'nearest' });
+}
+
+function pickChoose(option: HTMLElement): void {
+  const box = option.closest<HTMLElement>('.pick');
+  const id = option.dataset.id;
+  if (!box || !id) return;
+  const i = Number(box.dataset.i);
+  const next = [...st.tiles];
+  next[i] = { t: next[i].t, p: id };
+  commit(next);
+}
+
+function initPicker(): void {
+  const inputOf = (e: Event) => (e.target as Element).closest?.<HTMLInputElement>('.pick-input') ?? null;
+  // po vstupu do pole: označit text (psaním se přepíše) a ukázat celou nabídku
+  document.addEventListener('focusin', (e) => {
+    const input = inputOf(e);
+    if (!input) return;
+    input.select();
+    pickRender(input, '');
+  });
+  document.addEventListener('input', (e) => {
+    const input = inputOf(e);
+    if (input) pickRender(input, input.value);
+  });
+  document.addEventListener('keydown', (e) => {
+    const input = inputOf(e);
+    if (!input) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (input.getAttribute('aria-expanded') !== 'true') pickRender(input, input.value === input.dataset.current ? '' : input.value);
+      pickMove(input, e.key === 'ArrowDown' ? 1 : -1);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const box = input.closest('.pick');
+      const target = box?.querySelector<HTMLElement>('.sr-item.is-active') ?? (input.value.trim() && input.value !== input.dataset.current ? box?.querySelector<HTMLElement>('.sr-item') : null);
+      if (target) pickChoose(target);
+    } else if (e.key === 'Escape') {
+      pickClose(input);
+      input.blur();
+    }
+  });
+  // kliknutí do nabídky nesmí vzít poli fokus, jinak by se nabídka zavřela dřív, než klik doběhne
+  document.addEventListener('mousedown', (e) => {
+    if ((e.target as Element).closest?.('.pick-panel')) e.preventDefault();
+  });
+  document.addEventListener('focusout', (e) => {
+    const input = inputOf(e);
+    if (!input) return;
+    setTimeout(() => {
+      if (input.isConnected && !input.closest('.pick')?.contains(document.activeElement)) pickClose(input);
+    }, 120);
+  });
 }
 
 // ---------- úpravy ----------
@@ -333,6 +468,9 @@ function onClick(e: Event): void {
     case 'catalog-close':
       openCatalog(false);
       break;
+    case 'pick':
+      pickChoose(t);
+      break;
     case 'add': {
       const type = t.dataset.type as TileType;
       const p = defaultParam(type);
@@ -410,19 +548,6 @@ function onChange(e: Event): void {
     const next = [...st.tiles];
     next[i] = el.value ? { t: next[i].t, p: el.value } : { t: next[i].t };
     commit(next);
-  }
-  if (a === 'tile-param-search') {
-    const kind = el.dataset.kind;
-    const list = kind === 'team' ? st.catalog.teams : st.catalog.players;
-    const hit = list.find((x) => {
-      const show = kind === 'team' ? `${x.label} — ${x.group}` : `${x.label} (${x.group}) — ${TRACKED_LEAGUES.find((l) => l.slug === x.league)?.name ?? ''}`;
-      return show.toLowerCase() === el.value.trim().toLowerCase();
-    });
-    if (hit) {
-      const next = [...st.tiles];
-      next[i] = { t: next[i].t, p: hit.id };
-      commit(next);
-    }
   }
 }
 
@@ -503,6 +628,7 @@ async function boot(): Promise<void> {
 export function initDashboard(): void {
   document.addEventListener('click', onClick);
   document.addEventListener('change', onChange);
+  initPicker();
   window.addEventListener('hashchange', () => void boot());
   void boot();
 }

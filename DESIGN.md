@@ -87,8 +87,10 @@ Plynulost přechodů (pravidla, která je potřeba držet):
   uprostřed, vítěz má oranžovou číslici a prstenec kolem loga, poražený je ztlumený. V úzkém sloupci se čas a Bo
   přesunou nad řádek (container query).
 - **Detail zápasu** (`/zapas/<id>/`): velká tabule série, pod ní karta pro každou hru. Vlevo je vždy první tým série,
-  strana (modrá/červená, `--blue-side`/`--red-side`) je napsaná u týmu, protože se mezi hrami mění. Sestava: hráč,
-  šampion, role uprostřed, zrcadlově druhý tým; na úzké kartě se hráč přesune pod šampiona. Statistiky jsou dvoubarevný
+  strana (modrá/červená, `--blue-side`/`--red-side`) je napsaná u týmu, protože se mezi hrami mění. Sestava: řádek má tři díly,
+  dvě stejně široké půlky a mezi nimi pozici. Pozice jsou tak ve všech řádcích pod sebou přesně uprostřed karty,
+  šampioni k nim přiléhají zleva i zprava se stejným odstupem a hráči jsou u vnějších okrajů. Stejný střední sloupec
+  (`--g-mid`) mají i zákazy. Na úzké kartě je šampion nahoře a hráč pod ním, obojí u vnějšího okraje. Statistiky jsou dvoubarevný
   pruh s podílem. Šampioni jsou jen text (žádná převzatá grafika). Na detail vede skóre v každém řádku zápasu.
 - **Soupiska** (stránka týmu, přes celou šířku; dlaždice na dashboardu): sestava po pozicích jako hráčské karty.
   Jedna mřížka: sloupec = pozice (nadpis s ikonou pozice), řada = pořadí hráče na pozici; řady jsou stejně vysoké,
@@ -108,11 +110,23 @@ Plynulost přechodů (pravidla, která je potřeba držet):
   zvýrazněná shoda, typ vpravo). Šipky + Enter, Escape zavře. Na mobilu stránka Hledat ve spodní navigaci.
 - **Přehled výsledků**: každá liga je deska, každý zápas vlastní destička v mřížce. V úzkém sloupci (víc lig vedle
   sebe) dny odděluje stuha s kosočtvercem; v širokém sloupci (jedna liga, od 660 px) stuhy zmizí, destičky jdou za
-  sebou ve třech sloupcích a datum je na každé destičce.
+  sebou ve třech sloupcích a datum je na každé destičce. **Období platí doslova:** liga, která ve zvoleném období
+  nehrála, nedostane desku se staršími zápasy, jen jméno v řádku „bez zápasů“ pod přehledem. Když nehrála žádná
+  z vybraných lig, je místo desek jedna zpráva s tlačítky na období, ve kterých se hrálo. Dokud si návštěvník období
+  nevybere sám, ukáže se první, ve kterém se hrálo (tento týden → minulý týden → celý split).
 - **Dashboard**: stejně široké sloupce, dva a od 1600 px tři (hlavní dlaždice přes všechny).
 - **Fotka hráče**: na stránce hráče velký portrét v rámu (176 px, na mobilu 116 px); stahuje se zmenšená verze,
   původní obrázek je záloha.
-- **Pavouk**: kola vedle sebe, zápasy svisle na střed.
+- **Pavouk**: kola vedle sebe ve sloupcích, zápas je buňka o dvou řádcích (logo, kód, skóre; vítěz tučně a skóre
+  akcentem). Zápas dalšího kola sedí přesně mezi dvojicí, ze které vzešel, a spojuje je tenká čára. Sloupce se
+  nemačkají pod `--bm-min` a neroztahují nad `--bm-max`: když se nevejdou, pavouk se posouvá do strany, text
+  z buněk nikdy nepřetéká. Play-off na dvě prohry (MSI) má horní pavouk, pod ním dolní a velké finále (od 760 px
+  vpravo vedle nich). Bez spoilerů: skóre je otazník, na který se kliká; od druhého kola jsou skrytá i jména týmů.
+- **Starty lig** (dlaždice na dashboardu, přes celou šířku): karta pro každou ligu, vlevo logo a název, vpravo velké
+  číslo dní do startu; stavy „hraje se“ a „termín zatím není znám“. Bez výběru ligy ukáže všechny, rozdělené na
+  hlavní ligy, regionální ligy a mezinárodní turnaje. Sousední dlaždice se starty se spojí do jedné desky.
+- **Výběr týmu a hráče v dlaždici** (režim úprav): pole s vlastní nabídkou ve stylu hledání v hlavičce. Kliknutí
+  ukáže všechny týmy po ligách, psaní v nich hledá; šipky, Enter, Escape. Systémová nabídka prohlížeče se nepoužívá.
 - **Tabulka**: pořadí v odznaku (první zvýrazněný), pruh úspěšnosti, V–P.
 - **Vlajky**: stát hráče je odznak s vlajkou (`.flag`, SVG z balíku flag-icons; ne emoji, Windows je nezobrazuje).
   U týmu v řádku zápasu vlajka znamená „v soupisce je Čech nebo Slovák“. Neznámý stát = žádný odznak.

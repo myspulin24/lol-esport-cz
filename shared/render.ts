@@ -1,11 +1,11 @@
 // Vykreslení řádků, dlaždic a bloků stránek (jeden zdroj pro server i prohlížeč).
 
-import type { Bracket, Catalog, CzSkPlayer, LeagueInfo, Match, MatchTeam, Meta, SourceKey, Standings, Team, Transfer } from './types';
+import type { Bracket, BracketRound, Catalog, CzSkPlayer, LeagueInfo, Match, MatchTeam, Meta, SourceKey, Standings, Team, Transfer } from './types';
 import { h, type Child, type VNode } from './vnode';
 import { icon, type IconName } from './icons';
 import { dayKey, formatAgo, formatDate, formatDuration, formatRelativeDay, formatTime, pluralDays, daysUntil, roleCs } from './format';
 import { matchStatus, isInSeason } from './season';
-import { leagueName, leagueShort, SEASON_LEAGUES, LEAGUE_BY_SLUG } from './leagues';
+import { leagueName, leagueShort, SEASON_LEAGUES, LEAGUE_BY_SLUG, TRACKED_LEAGUES } from './leagues';
 import type { TileConfig } from './dashboard-schema';
 import { countryName, flagSrc, isCountryCode } from './countries';
 import { MAIN_ROLES, movements, normalizeRole, projectRoster, type Movement, type Projection, type RoleKey, type SlotStatus } from './roster-projection';
@@ -237,35 +237,100 @@ export function standingsTable(s: Standings, highlight?: string): VNode {
 
 // ---------- pavouk (D22) ----------
 
-export function bracketView(b: Bracket, now: Date): VNode {
-  const currentIdx = Math.max(
-    0,
-    b.rounds.findIndex((r) => r.matches.some((m) => m.state !== 'completed')),
+const PART_LABEL: Record<NonNullable<BracketRound['part']>, string> = { upper: 'Horní pavouk', lower: 'Dolní pavouk', final: 'Velké finále' };
+
+/**
+ * Jeden zápas v pavouku: dva řádky (logo, kód, skóre) a pod nimi čas, dokud se nehrálo. Celá buňka vede na detail.
+ * `hideTeams` = v režimu bez spoilerů schovat i jména (od druhého kola prozrazují, kdo postoupil).
+ */
+function bracketCell(m: Match, now: Date, hideTeams: boolean): VNode {
+  const st = matchStatus(m, now);
+  const done = st.kind === 'final';
+  const [a, b] = m.teams;
+  const knownTeams = m.teams.every((t) => t.code && t.code !== 'TBD');
+  const line = (t: MatchTeam) => {
+    const tbd = !t.code || t.code === 'TBD';
+    const id: Child[] = tbd ? [h('span', { class: 'bm-code bm-code--tbd' }, 'bude určen')] : [coin(t.image), h('span', { class: 'bm-code', title: t.name }, t.code)];
+    return h(
+      'span',
+      { class: `bm-team${done && t.outcome === 'win' ? ' win' : ''}` },
+      h('span', { class: `bm-id${hideTeams && !tbd ? ' sp-name' : ''}` }, ...id),
+      done ? h('span', { class: 'sp bm-sp', 'data-sp-label': `Odkrýt skóre ${a.code}–${b.code}` }, h('b', { class: 'sp-v' }, String(t.gameWins ?? 0))) : null,
+    );
+  };
+  const foot =
+    st.kind === 'live'
+      ? h('span', { class: 'bm-when bm-when--live' }, h('span', { class: 'live-dot', 'aria-hidden': 'true' }), 'probíhá')
+      : !done && m.startTime
+        ? h('time', { class: 'bm-when', datetime: m.startTime }, `${formatRelativeDay(m.startTime, now)} ${formatTime(m.startTime)}`)
+        : !done
+          ? h('span', { class: 'bm-when' }, st.label)
+          : null;
+  const detail = /^d+$/.test(m.id) && knownTeams;
+  return h(
+    detail ? 'a' : 'div',
+    {
+      class: `bm${done ? ' is-final' : ''}${st.kind === 'live' ? ' is-live' : ''}`,
+      href: detail ? `/zapas/${m.id}/` : undefined,
+      'aria-label': detail ? `Detail zápasu ${a.code}–${b.code}` : undefined,
+      // skrývá se skóre odehraných zápasů a jména v dalších kolech (i u zápasů, které teprve budou)
+      'data-spoiler': done || (hideTeams && knownTeams) ? '1' : undefined,
+      'data-mid': m.id,
+    },
+    line(a),
+    line(b),
+    foot,
   );
-  const active = b.rounds.some((r) => r.matches.some((m) => m.state !== 'completed')) ? currentIdx : b.rounds.length - 1;
+}
+
+/** Sloupce kol vedle sebe. Sousední zápasy se spojují do zápasu dalšího kola čarou, když jich další kolo má polovinu. */
+function bracketColumns(rounds: BracketRound[], now: Date, firstIsOpen: boolean): VNode {
   return h(
     'div',
-    { class: 'bracket', 'data-bracket': b.tournament },
-    h(
+    { class: 'br-grid', style: `--cols:${rounds.length}` },
+    ...rounds.map((r, i) => {
+      const next = rounds[i + 1]?.matches.length;
+      const link = next === undefined ? '' : r.matches.length === next * 2 ? 'pairs' : r.matches.length === next ? 'straight' : '';
+      const cells = r.matches.map((m) => bracketCell(m, now, !(firstIsOpen && i === 0)));
+      const body: Child[] = [];
+      if (link === 'pairs') for (let k = 0; k < cells.length; k += 2) body.push(h('div', { class: 'br-pair' }, cells[k], cells[k + 1]));
+      else body.push(...cells);
+      return h(
+        'section',
+        { class: `br-col${link ? ` br-col--${link}` : ''}${i > 0 ? ' has-prev' : ''}`, 'aria-label': r.name },
+        h('h3', { class: 'br-name' }, r.name),
+        h('div', { class: 'br-cells' }, ...body),
+      );
+    }),
+  );
+}
+
+export function bracketView(b: Bracket, now: Date): VNode {
+  const parts = (['upper', 'lower', 'final'] as const).map((p) => ({ part: p, rounds: b.rounds.filter((r) => r.part === p) })).filter((x) => x.rounds.length);
+  if (parts.length) {
+    // na dvě prohry: horní a dolní pavouk pod sebou, velké finále vedle nich (v úzkém místě pod nimi)
+    return h(
       'div',
-      { class: 'br-tabs', role: 'tablist', 'aria-label': 'Kola' },
-      ...b.rounds.map((r, i) =>
-        h('button', { type: 'button', role: 'tab', class: 'br-tab', 'aria-selected': i === active ? 'true' : 'false', 'data-action': 'round', 'data-round': i }, r.name),
-      ),
-    ),
-    h(
-      'div',
-      { class: 'br-rounds' },
-      ...b.rounds.map((r, i) =>
-        h(
-          'section',
-          { class: `br-round${i === active ? ' is-active' : ''}`, 'data-round': i, 'aria-label': r.name },
-          h('h3', { class: 'br-name' }, r.name),
-          ...r.matches.map((m) => matchRow(m, { now, showDate: true, hideTeamsWhenSpoilers: i > 0 })),
+      { class: 'bracket bracket--double', 'data-bracket': b.tournament },
+      h(
+        'div',
+        { class: 'br-body' },
+        ...parts.map(({ part, rounds }) =>
+          h(
+            'div',
+            { class: `br-part br-part--${part}` },
+            h('h3', { class: 'br-part-name' }, PART_LABEL[part]),
+            part === 'final' ? h('div', { class: 'br-final' }, ...rounds.flatMap((r) => r.matches.map((m) => bracketCell(m, now, true)))) : bracketColumns(rounds, now, part === 'upper'),
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
+  // formát, který se nepodařilo rozdělit do kol: obyčejný seznam zápasů
+  if (b.rounds.length === 1 && b.rounds[0].matches.length > 1) {
+    return h('div', { class: 'bracket bracket--list', 'data-bracket': b.tournament }, h('div', { class: 'mlist' }, ...b.rounds[0].matches.map((m) => matchRow(m, { now, showDate: true }))));
+  }
+  return h('div', { class: 'bracket', 'data-bracket': b.tournament }, h('div', { class: 'br-body' }, bracketColumns(b.rounds, now, true)));
 }
 
 // ---------- soupiska ----------
@@ -492,7 +557,7 @@ export const TILE_LABEL: Record<TileConfig['t'], string> = {
   player: 'Sleduj hráče',
   transfers: 'Přestupy',
   czsk: 'Češi a Slováci',
-  countdown: 'Odpočet startu ligy',
+  countdown: 'Starty lig',
 };
 
 const TILE_SOURCE: Record<TileConfig['t'], SourceKey> = {
@@ -526,7 +591,7 @@ export function tileTitle(t: TileConfig, data: RenderData): string {
     case 'czsk':
       return 'Češi a Slováci';
     case 'countdown':
-      return `Start · ${leagueName(t.p ?? '')}`;
+      return t.p ? `Start · ${leagueName(t.p)}` : 'Starty lig';
   }
 }
 
@@ -577,7 +642,7 @@ function tileBody(t: TileConfig, data: RenderData): Child | Child[] {
     case 'bracket': {
       const b = data.brackets[t.p ?? ''];
       if (!b || !b.rounds.length) return empty('Pavouk se ukáže po skupinové fázi.');
-      return bracketView(b, now);
+      return [bracketView(b, now), moreLink(`/turnaj/${b.tournament}/`, 'Stránka turnaje')];
     }
     case 'player':
       return playerBody(t.p ?? '', data);
@@ -595,17 +660,111 @@ function tileBody(t: TileConfig, data: RenderData): Child | Child[] {
       return [h('ul', { class: 'czlist' }, ...list.map(czskRow)), moreLink('/cesi/', `Všech ${(data.czsk ?? []).length} hráčů`)];
     }
     case 'countdown':
-      return countdownBody(t.p ?? '', data);
+      return startsBoard(t.p ? [t.p] : null, data);
   }
 }
 
-export function countdownBody(league: string, data: RenderData): VNode {
+// ---------- starty lig (odpočet) ----------
+
+export type LeagueStart =
+  | { kind: 'running'; name?: string; until?: string }
+  | { kind: 'soon'; days: number; date: string; name?: string }
+  | { kind: 'unknown'; lastName?: string; lastEnd?: string };
+
+/** V jakém stavu liga je: hraje se, začne za N dní, nebo termín dalšího startu ještě není znám. */
+export function leagueStart(info: LeagueInfo | undefined, data: Pick<RenderData, 'now' | 'upcoming'>): LeagueStart {
+  const today = dayKey(data.now);
+  if (info?.currentStart && info.currentEnd && info.currentStart <= today && today <= info.currentEnd) {
+    // Turnaj končí dnem v rozpisu, ne posledním zápasem: když už jsou všechny známé zápasy odehrané, nehraje se.
+    const ms = (data.upcoming ?? []).filter((m) => m.league === info.slug);
+    if (!ms.length || ms.some((m) => m.state !== 'completed')) return { kind: 'running', name: info.currentName, until: info.currentEnd };
+  }
+  if (info?.nextStart) {
+    const days = daysUntil(info.nextStart, data.now);
+    return days > 0 ? { kind: 'soon', days, date: info.nextStart, name: info.nextName } : { kind: 'running', name: info.nextName };
+  }
+  return { kind: 'unknown', lastName: info?.currentName, lastEnd: info?.currentEnd };
+}
+
+/** „2026-09-13“ → „13. 9. 2026“; pevné mezery, aby se datum nezalomilo uprostřed. */
+function ymdDate(ymd: string): string {
+  const [y, m, d] = ymd.split('-').map(Number);
+  return `${d}.\u00a0${m}.\u00a0${y}`;
+}
+
+/**
+ * Karta jedné ligy: logo, název a dva řádky (co se ví o dalším startu, podrobnost). Vpravo velké číslo dní,
+ * nebo značka „hraje se“; u neznámého termínu nic, aby text měl místo.
+ */
+export function startCard(league: string, data: RenderData): VNode {
   const info = data.leagues.find((l) => l.slug === league);
+  const s = leagueStart(info, data);
   const name = leagueName(league);
-  if (!info?.nextStart) return h('p', { class: 'cd' }, h('strong', null, name), ' 2027: termín zatím neznámý');
-  const d = daysUntil(info.nextStart, data.now);
-  if (d <= 0) return h('p', { class: 'cd' }, h('strong', null, name), ' už běží');
-  return h('p', { class: 'cd' }, h('strong', null, name), ` startuje za ${pluralDays(d)}`, h('a', { class: 'cd-ics', href: `/ics/liga-${leagueShort(league)}.ics` }, icon('calendar', 'ic ic-s'), ' Do kalendáře'));
+  // „LEC 2026 Split 3“ → „Split 3“: liga je v nadpisu karty a rok u data; u turnaje bez splitu nezbude nic
+  const short = (t?: string) => {
+    const rest = (t ?? '').replace(name, '').replace(/\b20\d\d\b/, '').replace(/\s+/g, ' ').trim();
+    return rest ? rest[0].toUpperCase() + rest.slice(1) : undefined;
+  };
+  let line1: string;
+  let line2: Child[];
+  let side: VNode | null = null;
+  if (s.kind === 'soon') {
+    const [, unit = 'dní'] = pluralDays(s.days).split(' ');
+    line1 = short(s.name) ?? 'Další start';
+    line2 = [`start ${ymdDate(s.date)}`, h('a', { class: 'cd-ics', href: `/ics/liga-${leagueShort(league)}.ics` }, icon('calendar', 'ic ic-s'), 'do kalendáře')];
+    side = h('span', { class: 'cd-days', title: `Start ${ymdDate(s.date)}` }, h('span', { class: 'cd-za' }, 'za'), h('b', null, String(s.days)), h('span', { class: 'cd-unit' }, unit));
+  } else if (s.kind === 'running') {
+    line1 = short(s.name) ?? 'Právě se hraje';
+    line2 = [s.until ? `do ${ymdDate(s.until)}` : 'právě se hraje'];
+    side = h('span', { class: 'cd-live' }, h('span', { class: 'live-dot', 'aria-hidden': 'true' }), 'hraje se');
+  } else {
+    line1 = 'Termín zatím není znám';
+    const last = short(s.lastName);
+    // bez slovesa: „Split 3“ skončil, ale „Zima“ skončila
+    line2 = [s.lastEnd ? `${last ? `${last} · konec` : 'naposledy'} ${ymdDate(s.lastEnd)}` : last ? `naposledy ${last}` : 'zatím bez turnaje'];
+  }
+  return h(
+    'div',
+    { class: `cd-card cd-card--${s.kind}`, 'data-league': league },
+    coin(info?.image, 'm-coin m-coin--lg'),
+    h('div', { class: 'cd-id' }, h('a', { class: 'cd-league', href: `/liga/${leagueShort(league)}/` }, name), h('span', { class: 'cd-line' }, line1), h('span', { class: 'cd-sub' }, ...line2)),
+    side,
+  );
+}
+
+const START_GROUPS: Array<{ group: LeagueInfo['group']; label: string }> = [
+  { group: 'major', label: 'Hlavní ligy' },
+  { group: 'regional', label: 'Regionální ligy' },
+  { group: 'international', label: 'Mezinárodní turnaje' },
+];
+const START_ORDER: Record<LeagueStart['kind'], number> = { running: 0, soon: 1, unknown: 2 };
+
+/**
+ * Deska se starty lig. Bez výběru ukáže všechny sledované soutěže rozdělené na hlavní ligy, regionální ligy
+ * a mezinárodní turnaje; v každé skupině napřed ty, které hrají, pak podle toho, která začne dřív.
+ */
+export function startsBoard(leagues: string[] | null, data: RenderData): VNode {
+  if (leagues) return h('div', { class: 'cd-board' }, h('div', { class: 'cd-cards cd-cards--fit' }, ...leagues.map((l) => startCard(l, data))));
+  const info = (slug: string) => data.leagues.find((l) => l.slug === slug);
+  const rank = (slug: string) => {
+    const s = leagueStart(info(slug), data);
+    return START_ORDER[s.kind] * 100_000 + (s.kind === 'soon' ? s.days : 0);
+  };
+  return h(
+    'div',
+    { class: 'cd-board' },
+    ...START_GROUPS.map(({ group, label }) => {
+      const list = TRACKED_LEAGUES.filter((l) => l.group === group)
+        .map((l) => l.slug)
+        .sort((x, y) => rank(x) - rank(y));
+      return list.length ? h('div', { class: 'cd-group' }, h('h3', { class: 'cd-group-name' }, label), h('div', { class: 'cd-cards' }, ...list.map((l) => startCard(l, data)))) : null;
+    }),
+  );
+}
+
+/** Jedna liga (stránka ligy, když nejsou žádné příští zápasy). */
+export function countdownBody(league: string, data: RenderData): VNode {
+  return startsBoard([league], data);
 }
 
 function groupByLeague(ms: Match[]): Map<string, Match[]> {
@@ -684,17 +843,33 @@ export function defaultTiles(data: Pick<RenderData, 'upcoming' | 'now'>): TileCo
   return [{ t: 'countdown', p: 'lec' }, { t: 'czsk' }, { t: 'transfers', p: 'all' }, { t: 'results', p: 'lec' }];
 }
 
-/** První dlaždice (kromě odpočtu) je hlavní plocha; odpočet se kreslí jako proužek nad ní. */
-export function renderDashboard(tiles: TileConfig[], data: RenderData): VNode[] {
+/**
+ * První dlaždice (kromě startů lig) je hlavní plocha; starty lig se kreslí jako deska přes celou šířku.
+ * Sousední dlaždice se starty se spojí do jedné desky (LEC, LCS a LCK vedle sebe místo tří pruhů pod sebou);
+ * při úpravách (`separate`) zůstávají zvlášť, aby se každá dala posunout a odebrat.
+ */
+export function renderDashboard(tiles: TileConfig[], data: RenderData, o: { separate?: boolean } = {}): VNode[] {
   const out: VNode[] = [];
   let primaryDone = false;
-  tiles.forEach((t, i) => {
+  for (let i = 0; i < tiles.length; i++) {
+    const t = tiles[i];
     if (t.t === 'countdown') {
-      out.push(h('div', { class: 'strip', 'data-tile': i }, countdownBody(t.p ?? '', data)));
-      return;
+      const first = i;
+      const group = [t];
+      if (!o.separate) while (tiles[i + 1]?.t === 'countdown') group.push(tiles[++i]);
+      const leagues = group.some((g) => !g.p) ? null : [...new Set(group.map((g) => g.p as string))];
+      out.push(
+        h(
+          'section',
+          { class: 'strip', 'data-tile': first, 'aria-labelledby': `tile-h-${first}` },
+          h('header', { class: 'cd-head' }, h('h2', { id: `tile-h-${first}` }, 'Starty lig'), freshness('lolesports', data.meta, data.now)),
+          startsBoard(leagues, data),
+        ),
+      );
+      continue;
     }
     out.push(renderTile(t, data, { index: i, primary: !primaryDone }));
     primaryDone = true;
-  });
+  }
   return out;
 }

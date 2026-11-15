@@ -38,6 +38,8 @@ test('výsledky: výběr ligy se zapamatuje', async ({ page }, info) => {
   await ready(page);
   const box = () => page.locator('label:visible').filter({ hasText: /^LCS$/ }).locator('input');
   await box().check();
+  // Sloupec má jen liga, která ve zvoleném období hrála; „Celý split“ ukáže poslední turnaj ligy v každé části roku.
+  await page.locator('.seg [data-period="split"]').click();
   await expect(page.locator('.res-col[data-league="lcs"] h2')).toBeVisible();
   await page.reload();
   await ready(page);

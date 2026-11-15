@@ -1,7 +1,7 @@
 // Přehled výsledků v prohlížeči (D19): výběr lig (spodní panel na mobilu), období, záložky / sloupce.
 
 import type { LeagueInfo, Match, Meta } from '../../../shared/types';
-import { resultsView, type Period } from '../../../shared/results';
+import { firstPlayedPeriod, resultsView, type Period } from '../../../shared/results';
 import { DEFAULT_RESULTS_LEAGUES, LEAGUE_BY_SHORT, TRACKED_LEAGUES, leagueShort } from '../../../shared/leagues';
 import type { RenderData, Streamer } from '../../../shared/render';
 import { mount } from '../../../shared/vnode';
@@ -14,13 +14,14 @@ const LKEY = 'results:leagues';
 const PKEY = 'results:period';
 
 let leagues: string[] = [];
-let period: Period = 'week';
+/** Období, které si návštěvník sám vybral. Dokud žádné nevybral, bere se první, ve kterém se hrálo. */
+let period: Period | undefined;
 let active: string | undefined;
 
 function save(): void {
   try {
     localStorage.setItem(LKEY, JSON.stringify(leagues));
-    localStorage.setItem(PKEY, period);
+    if (period) localStorage.setItem(PKEY, period);
   } catch {
     /* nic */
   }
@@ -45,9 +46,10 @@ function restore(): void {
   }
 }
 
-function syncControls(): void {
+function syncControls(shown: Period | undefined): void {
   for (const box of document.querySelectorAll<HTMLInputElement>('[data-league-box]')) box.checked = leagues.includes(box.value);
-  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-period]')) b.setAttribute('aria-pressed', String(b.dataset.period === period));
+  // Jen přepínač období; tlačítka v prázdném stavu mají data-period také, ale nejsou přepínač.
+  if (shown) for (const b of document.querySelectorAll<HTMLButtonElement>('.seg [data-period]')) b.setAttribute('aria-pressed', String(b.dataset.period === shown));
   const count = document.querySelector('[data-league-count]');
   if (count) count.textContent = String(leagues.length);
 }
@@ -55,8 +57,9 @@ function syncControls(): void {
 async function render(): Promise<void> {
   const el = document.querySelector<HTMLElement>('[data-results]');
   if (!el) return;
-  syncControls();
-  document.querySelector('.res-controls')?.setAttribute('data-ready', '');
+  syncControls(period);
+  // Bez vlastní volby období se přepínač ukáže, až je z dat jasné, které období platí.
+  if (period || !leagues.length) document.querySelector('.res-controls')?.setAttribute('data-ready', '');
   if (!leagues.length) {
     el.textContent = 'Vyber aspoň jednu ligu.';
     el.setAttribute('data-ready', '');
@@ -74,8 +77,11 @@ async function render(): Promise<void> {
     }),
   );
   const data: RenderData = { now: new Date(), meta, leagues: leagueInfo, schedule, standings: {}, teams: {}, brackets: {}, streamers };
+  const shown = period ?? firstPlayedPeriod(leagues, schedule, data.now);
+  syncControls(shown);
+  document.querySelector('.res-controls')?.setAttribute('data-ready', '');
   introClock(el);
-  mount(el, resultsView(leagues, period, data, active));
+  mount(el, resultsView(leagues, shown, data, active));
   el.setAttribute('data-ready', '');
   void refreshFreshness(meta);
 }
