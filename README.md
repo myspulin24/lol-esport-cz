@@ -50,6 +50,9 @@ se zastaví, pokud by nový build byl o víc než 20 % menší než ten minulý.
    v `pipeline/deploy.ts` a nastavte proměnnou `FTP_DIR` (krok 4). Deploy do jiné složky odmítne zapsat.
 2. **Forpsi:** zapněte SSL certifikát pro `lol.godmike.cz`. Pak můžete v `site/public/.htaccess`
    odkomentovat přesměrování na HTTPS.
+   **Povolte FTP přístup z USA:** GitHub nahrává ze serverů v USA a Forpsi umí FTP omezit podle země.
+   Administrace → Nastavení → Webhosting → godmike.cz → FTP → „omezit přístup k FTP“: buď omezení vypnout,
+   nebo mezi povolené země přidat USA. Bez toho nasazení z GitHubu končí chybou 530.
 3. **GitHub:** založte repozitář a nahrajte do něj tuto složku (`git push`). Doporučuji **veřejný**
    repozitář: v kódu nejsou žádná hesla a GitHub Actions jsou pro veřejné repozitáře zdarma bez limitu.
    Soukromý repozitář má zdarma 2 000 minut měsíčně, běh každých 15 minut spotřebuje zhruba 5 000–6 000.
@@ -117,6 +120,9 @@ nasazení přestane fungovat, přijde e-mail. Na webu se po 6 hodinách bez čer
 - **„deploy se zastavil, aby rozbitý build nesmazal web“**: nový build má o víc než 20 % méně souborů.
   Zkontrolujte běh; je-li to záměr, nasaďte ručně s `DEPLOY_ALLOW_SHRINK=1`.
 - **Leaguepedia vrací „rate limit“**: nevadí, použijí se poslední data a příští hodinu se to zkusí znovu.
+- **„Deploy selhal: 530 Login authentication failed“, ale z počítače se stejnými údaji přihlášení funguje**:
+  Forpsi odmítá FTP přihlášení ze země, odkud GitHub běží (USA). Povolte ji v administraci Forpsi
+  (krok 2 výše). Odmítnuté pokusy jsou vidět v FTP logu tamtéž.
 - **Push do větve data selže**: Settings → Actions → General → Workflow permissions → Read and write.
 
 ## Zdroje a licence
