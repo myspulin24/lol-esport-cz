@@ -105,7 +105,8 @@ async function renderData(tiles: TileConfig[]): Promise<RenderData> {
         break;
       }
       case 'bracket':
-        need.add(`bracket:${t.p}`);
+        // bez turnaje = všechny turnaje s pavoukem
+        for (const id of t.p ? [t.p] : catalog.tournaments.map((x) => x.id)) need.add(`bracket:${id}`);
         break;
       case 'transfers':
         need.add('transfers');
@@ -222,8 +223,13 @@ function paramPicker(t: TileConfig, i: number, cat: Catalog): VNode | null {
   if (need === 'transfers') {
     return h('span', null, label('Filtr přestupů'), h('select', { id, 'data-action': 'tile-param', 'data-i': i }, ...leagueOptions(t.p, [{ v: 'all', l: 'Všechny ligy' }, { v: 'czsk', l: 'Jen Češi a Slováci' }])));
   }
-  if (need === 'tournament') {
-    return h('span', null, label('Turnaj'), h('select', { id, 'data-action': 'tile-param', 'data-i': i }, ...cat.tournaments.map((x) => h('option', { value: x.id, selected: x.id === t.p }, x.label))));
+  if (need === 'tournament-optional') {
+    return h(
+      'span',
+      null,
+      label('Turnaj'),
+      h('select', { id, 'data-action': 'tile-param', 'data-i': i }, h('option', { value: '', selected: !t.p }, 'Všechny turnaje'), ...cat.tournaments.map((x) => h('option', { value: x.id, selected: x.id === t.p }, x.label))),
+    );
   }
   // tým / hráč: pole s vlastní nabídkou (D20). Po kliknutí se nabídka otevře a psaním se v ní hledá.
   const list = need === 'team' ? cat.teams : cat.players;
@@ -410,8 +416,6 @@ function defaultParam(t: TileType): string | undefined {
       return cat.teams.find((x) => x.league === 'lec')?.id ?? cat.teams[0]?.id;
     case 'player':
       return cat.players.find((x) => x.league === 'lec')?.id ?? cat.players[0]?.id;
-    case 'tournament':
-      return cat.tournaments.at(-1)?.id;
     case 'transfers':
       return 'all';
     default:

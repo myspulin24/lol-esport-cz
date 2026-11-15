@@ -127,6 +127,14 @@ function initDelegates(): void {
       }
       return;
     }
+    // mezinárodní turnaje: přepínač pavouků v široké dlaždici
+    const bracketTab = t.closest<HTMLButtonElement>('[data-action="bracket-tab"]');
+    if (bracketTab) {
+      const box = bracketTab.closest('.tile--bracket');
+      box?.querySelectorAll('[data-action="bracket-tab"]').forEach((b) => b.setAttribute('aria-selected', String(b === bracketTab)));
+      box?.querySelectorAll<HTMLElement>('[data-bpane]').forEach((p) => (p.hidden = p.dataset.bpane !== bracketTab.dataset.tab));
+      return;
+    }
     // soupiska: aktuální / odhad na další split
     const rosterTab = t.closest<HTMLButtonElement>('[data-action="roster-tab"]');
     if (rosterTab) {

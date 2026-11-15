@@ -112,46 +112,60 @@ test('soupiska týmu: tým jde vyhledat a vybrat', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
-test('pavouk: zápasy nepřetékají z dlaždice a play-off na dvě prohry má horní a dolní část', async ({ page }) => {
+test('mezinárodní turnaje: jedna široká dlaždice s přepínačem, pavouk nepřetéká', async ({ page }) => {
   const errors = collectErrors(page);
   const tournaments = (await (await page.request.get('/data/tournaments.json')).json()) as Array<{ slug: string }>;
   test.skip(!tournaments.length, 'v datech teď není žádný turnaj s pavoukem');
   await openWith(page, [{ t: 'czsk' }, ...tournaments.map((t) => ({ t: 'bracket', p: t.slug }))]);
 
-  const tiles = page.locator('.tile--bracket');
-  await expect(tiles).toHaveCount(tournaments.length);
+  // sousední pavouci jsou jedna dlaždice přes celou šířku dashboardu
+  const tile = page.locator('.tile--bracket');
+  await expect(tile).toHaveCount(1);
+  const widths = await page.evaluate(() => [document.querySelector('.tile--bracket')!.getBoundingClientRect().width, document.querySelector('[data-dash]')!.getBoundingClientRect().width]);
+  expect(widths[0]).toBeGreaterThan(widths[1] - 2);
+  const tabs = tile.locator('[data-action="bracket-tab"]');
+  await expect(tabs).toHaveCount(tournaments.length > 1 ? tournaments.length : 0);
+
   for (let i = 0; i < tournaments.length; i++) {
-    const tile = tiles.nth(i);
+    const slug = tournaments[i].slug;
+    if (tournaments.length > 1) {
+      await tabs.nth(i).click();
+      await expect(tabs.nth(i)).toHaveAttribute('aria-selected', 'true');
+    }
+    // vidět je vždy jen pavouk vybraného turnaje
+    await expect(tile.locator('.br-pane:visible')).toHaveCount(1);
+    const pane = tile.locator(`[data-bpane="${slug}"]`);
+    await expect(pane).toBeVisible();
     // nic nesmí přečnívat z dlaždice; co se nevejde, je uvnitř posuvné mřížky kol
-    const outside = await tile.evaluate((node) => {
-      const box = node.getBoundingClientRect();
+    const outside = await pane.evaluate((node) => {
+      const box = node.closest('.tile')!.getBoundingClientRect();
       return [...node.querySelectorAll<HTMLElement>('.bm')].filter((bm) => {
         const scroller = bm.closest<HTMLElement>('.br-grid');
         const clip = scroller ? scroller.getBoundingClientRect() : box;
         const r = bm.getBoundingClientRect();
-        // buňka je buď celá v dlaždici, nebo ji ořezává posuvná mřížka
-        const visibleRight = Math.min(r.right, clip.right);
-        return visibleRight > box.right + 1 || r.left < box.left - 1;
+        return Math.min(r.right, clip.right) > box.right + 1 || r.left < box.left - 1;
       }).length;
     });
-    expect(outside, `pavouk ${tournaments[i].slug}`).toBe(0);
+    expect(outside, `pavouk ${slug}`).toBe(0);
     // kód týmu ani skóre nelezou z buňky zápasu
-    const spill = await tile.evaluate((node) =>
+    const spill = await pane.evaluate((node) =>
       [...node.querySelectorAll<HTMLElement>('.bm')].filter((bm) => {
         const r = bm.getBoundingClientRect();
         return [...bm.querySelectorAll<HTMLElement>('.bm-code, .bm-sp')].some((x) => x.getBoundingClientRect().right > r.right + 1 || x.getBoundingClientRect().left < r.left - 1);
       }).length,
     );
-    expect(spill, `buňky pavouka ${tournaments[i].slug}`).toBe(0);
+    expect(spill, `buňky pavouka ${slug}`).toBe(0);
+    // play-off na dvě prohry (MSI) má horní a dolní pavouk a velké finále
+    if (await pane.locator('.bracket--double').count()) {
+      await expect(pane.locator('.br-part--upper .bm').first()).toBeVisible();
+      await expect(pane.locator('.br-part--lower .bm').first()).toBeVisible();
+      await expect(pane.locator('.br-part--final .bm')).toHaveCount(1);
+    }
   }
 
-  // MSI se hraje na dvě prohry: 14 zápasů v horním a dolním pavouku a velké finále
-  const double = page.locator('.bracket--double');
-  if (await double.count()) {
-    await expect(double.first().locator('.br-part--upper .bm').first()).toBeVisible();
-    await expect(double.first().locator('.br-part--lower .bm').first()).toBeVisible();
-    await expect(double.first().locator('.br-part--final .bm')).toHaveCount(1);
-  }
+  // při úpravách je každý turnaj zvlášť, aby šel posunout a odebrat
+  await page.locator('[data-action="edit"]').click();
+  await expect(page.locator('.tile--bracket')).toHaveCount(tournaments.length);
   expect(errors).toEqual([]);
 });
 

@@ -126,6 +126,10 @@ Plynulost přechodů (pravidla, která je potřeba držet):
   čtverce). Tlačítko „Nainstalovat“ je v patičce a mezi akcemi dashboardu a ukáže se, jen když prohlížeč instalaci
   nabízí; žádná vyskakovací výzva. Stránka `/offline/` je jedna deska s tlačítkem „Zkusit znovu“ a odkazy na
   hlavní stránky.
+- **Mezinárodní turnaje** (dlaždice na dashboardu): jedna široká dlaždice přes celý dashboard. Vpravo nahoře je
+  přepínač turnajů (First Stand, MSI, Worlds; na telefonu bez roku), pod ním pavouk vybraného turnaje vystředěný
+  a vedle něj karta vítěze (v režimu bez spoilerů skrytá, dokud se na ni neklikne). Sousední dlaždice pavouků se
+  spojí do jedné; jako první je vidět turnaj, který se právě hraje, jinak ten, kde se hrálo naposledy.
 - **Starty lig** (dlaždice na dashboardu, přes celou šířku): karta pro každou ligu, vlevo logo a název, vpravo velké
   číslo dní do startu; stavy „hraje se“ a „termín zatím není znám“. Bez výběru ligy ukáže všechny, rozdělené na
   hlavní ligy, regionální ligy a mezinárodní turnaje. Sousední dlaždice se starty se spojí do jedné desky.

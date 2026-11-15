@@ -305,24 +305,46 @@ function bracketColumns(rounds: BracketRound[], now: Date, firstIsOpen: boolean)
   );
 }
 
+/** Vítěz turnaje: kdo vyhrál poslední zápas pavouka (finále, u play-off na dvě prohry velké finále). */
+export function bracketChampion(b: Bracket): MatchTeam | undefined {
+  const last = b.rounds.at(-1);
+  if (!last || last.matches.length !== 1 || (last.part && last.part !== 'final')) return undefined;
+  const m = last.matches[0];
+  return m.state === 'completed' ? m.teams.find((t) => t.outcome === 'win') : undefined;
+}
+
+/** Karta vítěze vedle pavouka. V režimu bez spoilerů je jméno i logo skryté, dokud na ně člověk neklikne. */
+function championCard(t: MatchTeam): VNode {
+  return h(
+    'div',
+    { class: 'br-champ', 'data-spoiler': '1' },
+    h('span', { class: 'br-champ-label' }, 'Vítěz'),
+    h('span', { class: 'br-champ-team sp-name' }, coin(t.image, 'm-coin m-coin--xl'), h(t.slug ? 'a' : 'span', { class: 'br-champ-name', href: t.slug ? `/tym/${t.slug}/` : undefined }, t.name || t.code)),
+  );
+}
+
 export function bracketView(b: Bracket, now: Date): VNode {
+  const winner = bracketChampion(b);
+  const champion = winner ? championCard(winner) : null;
   const parts = (['upper', 'lower', 'final'] as const).map((p) => ({ part: p, rounds: b.rounds.filter((r) => r.part === p) })).filter((x) => x.rounds.length);
   if (parts.length) {
-    // na dvě prohry: horní a dolní pavouk pod sebou, velké finále vedle nich (v úzkém místě pod nimi)
+    // na dvě prohry: horní a dolní pavouk pod sebou, vedle nich velké finále a vítěz (v úzkém místě pod nimi)
+    const partView = ({ part, rounds }: (typeof parts)[number]) =>
+      h(
+        'div',
+        { class: `br-part br-part--${part}` },
+        h('h3', { class: 'br-part-name' }, PART_LABEL[part]),
+        part === 'final' ? h('div', { class: 'br-final' }, ...rounds.flatMap((r) => r.matches.map((m) => bracketCell(m, now, true)))) : bracketColumns(rounds, now, part === 'upper'),
+      );
+    const fin = parts.find((x) => x.part === 'final');
     return h(
       'div',
       { class: 'bracket bracket--double', 'data-bracket': b.tournament },
       h(
         'div',
         { class: 'br-body' },
-        ...parts.map(({ part, rounds }) =>
-          h(
-            'div',
-            { class: `br-part br-part--${part}` },
-            h('h3', { class: 'br-part-name' }, PART_LABEL[part]),
-            part === 'final' ? h('div', { class: 'br-final' }, ...rounds.flatMap((r) => r.matches.map((m) => bracketCell(m, now, true)))) : bracketColumns(rounds, now, part === 'upper'),
-          ),
-        ),
+        h('div', { class: 'br-main' }, ...parts.filter((x) => x.part !== 'final').map(partView)),
+        fin || champion ? h('div', { class: 'br-side' }, fin ? partView(fin) : null, champion) : null,
       ),
     );
   }
@@ -330,7 +352,61 @@ export function bracketView(b: Bracket, now: Date): VNode {
   if (b.rounds.length === 1 && b.rounds[0].matches.length > 1) {
     return h('div', { class: 'bracket bracket--list', 'data-bracket': b.tournament }, h('div', { class: 'mlist' }, ...b.rounds[0].matches.map((m) => matchRow(m, { now, showDate: true }))));
   }
-  return h('div', { class: 'bracket', 'data-bracket': b.tournament }, h('div', { class: 'br-body' }, bracketColumns(b.rounds, now, true)));
+  return h(
+    'div',
+    { class: 'bracket', 'data-bracket': b.tournament },
+    h('div', { class: 'br-body' }, h('div', { class: 'br-main' }, bracketColumns(b.rounds, now, true)), champion ? h('div', { class: 'br-side' }, champion) : null),
+  );
+}
+
+/** Který turnaj ukázat jako první: ten, který se právě hraje (má neodehraný zápas), jinak ten, kde se hrálo naposledy. */
+export function activeBracket(list: Bracket[]): Bracket | undefined {
+  const matches = (b: Bracket) => b.rounds.flatMap((r) => r.matches);
+  const open = list.find((b) => matches(b).some((m) => m.state !== 'completed'));
+  if (open) return open;
+  const latest = (b: Bracket) => matches(b).reduce((max, m) => (m.startTime > max ? m.startTime : max), '');
+  return [...list].sort((x, y) => latest(y).localeCompare(latest(x)))[0];
+}
+
+/**
+ * Mezinárodní turnaje jako jedna široká dlaždice: vpravo nahoře přepínač turnajů, pod ním pavouk vybraného.
+ * `group` jsou sousední dlaždice pavouků z konfigurace; dlaždice bez turnaje znamená „všechny turnaje“.
+ * Přepíná client/common.ts (data-action="bracket-tab").
+ */
+export function bracketBanner(group: TileConfig[], data: RenderData, index: number, primary = false): VNode {
+  const all = group.some((g) => !g.p);
+  const slugs = all ? (data.catalog?.tournaments.map((x) => x.id) ?? Object.keys(data.brackets)) : [...new Set(group.map((g) => g.p as string))];
+  const list = slugs.map((slug) => data.brackets[slug]).filter((b): b is Bracket => !!b && b.rounds.length > 0);
+  const active = activeBracket(list);
+  const id = `tile-h-${index}`;
+  return h(
+    'section',
+    { class: `tile tile--bracket tile--wide${primary ? ' tile--primary' : ''}`, 'data-tile': index, 'aria-labelledby': id },
+    h(
+      'header',
+      { class: 'tile-head' },
+      h('h2', { id }, list.length === 1 ? `Pavouk · ${list[0].name}` : 'Mezinárodní turnaje'),
+      freshness('lolesports', data.meta, data.now),
+      list.length > 1
+        ? h(
+            'div',
+            { class: 'seg br-switch', role: 'tablist', 'aria-label': 'Turnaj' },
+            ...list.map((b) => {
+              // rok zvlášť: na telefonu se schová, aby se přepínač vešel na jeden řádek
+              const [, name = b.name, year = ''] = b.name.match(/^(.*?)(\s+20\d\d)$/) ?? [];
+              return h('button', { type: 'button', role: 'tab', 'aria-selected': b === active ? 'true' : 'false', 'data-action': 'bracket-tab', 'data-tab': b.tournament }, name, year ? h('span', { class: 'br-yr' }, year) : null);
+            }),
+          )
+        : null,
+    ),
+    h(
+      'div',
+      { class: 'tile-body' },
+      list.length
+        ? list.map((b) => h('div', { class: 'br-pane', 'data-bpane': b.tournament, hidden: b !== active }, bracketView(b, data.now), moreLink(`/turnaj/${b.tournament}/`, `Stránka turnaje ${b.name}`)))
+        : empty('Pavouk se ukáže po skupinové fázi.'),
+    ),
+  );
 }
 
 // ---------- soupiska ----------
@@ -583,7 +659,7 @@ export function tileTitle(t: TileConfig, data: RenderData): string {
     case 'roster':
       return `Soupiska · ${findTeam(t.p ?? '', data.teams)?.name ?? t.p}`;
     case 'bracket':
-      return `Pavouk · ${data.brackets[t.p ?? '']?.name ?? t.p}`;
+      return t.p ? `Pavouk · ${data.brackets[t.p]?.name ?? t.p}` : 'Mezinárodní turnaje';
     case 'player':
       return `Hráč · ${data.catalog?.players.find((p) => p.id === t.p)?.label ?? t.p}`;
     case 'transfers':
@@ -845,7 +921,8 @@ export function defaultTiles(data: Pick<RenderData, 'upcoming' | 'now'>): TileCo
 
 /**
  * První dlaždice (kromě startů lig) je hlavní plocha; starty lig se kreslí jako deska přes celou šířku.
- * Sousední dlaždice se starty se spojí do jedné desky (LEC, LCS a LCK vedle sebe místo tří pruhů pod sebou);
+ * Sousední dlaždice se starty se spojí do jedné desky (LEC, LCS a LCK vedle sebe místo tří pruhů pod sebou)
+ * a sousední pavouci do jedné široké dlaždice s přepínačem turnajů;
  * při úpravách (`separate`) zůstávají zvlášť, aby se každá dala posunout a odebrat.
  */
 export function renderDashboard(tiles: TileConfig[], data: RenderData, o: { separate?: boolean } = {}): VNode[] {
@@ -866,6 +943,14 @@ export function renderDashboard(tiles: TileConfig[], data: RenderData, o: { sepa
           startsBoard(leagues, data),
         ),
       );
+      continue;
+    }
+    if (t.t === 'bracket') {
+      const first = i;
+      const group = [t];
+      if (!o.separate) while (tiles[i + 1]?.t === 'bracket') group.push(tiles[++i]);
+      out.push(bracketBanner(group, data, first, !primaryDone));
+      primaryDone = true;
       continue;
     }
     out.push(renderTile(t, data, { index: i, primary: !primaryDone }));

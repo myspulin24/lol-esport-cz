@@ -21,12 +21,12 @@ export const MAX_CONFIG_BYTES = 2048;
 export const MAX_TILES = 16;
 
 /** Jaký parametr který typ dlaždice potřebuje. */
-export const TILE_PARAM: Record<TileType, 'league' | 'team' | 'player' | 'tournament' | 'transfers' | 'none' | 'league-optional'> = {
+export const TILE_PARAM: Record<TileType, 'league' | 'team' | 'player' | 'tournament-optional' | 'transfers' | 'none' | 'league-optional'> = {
   today: 'league-optional',
   results: 'league',
   standings: 'league',
   roster: 'team',
-  bracket: 'tournament',
+  bracket: 'tournament-optional',
   player: 'player',
   transfers: 'transfers',
   czsk: 'none',
@@ -73,9 +73,10 @@ export function validateConfig(raw: unknown, catalog: Catalog): ValidationResult
       tiles.push({ t: type });
       continue;
     }
-    if (need === 'league-optional') {
+    if (need === 'league-optional' || need === 'tournament-optional') {
+      const ids = need === 'league-optional' ? k.league : k.tournament;
       if (p === undefined || p === null || p === '') tiles.push({ t: type });
-      else if (typeof p === 'string' && k.league.has(p)) tiles.push({ t: type, p });
+      else if (typeof p === 'string' && ids.has(p)) tiles.push({ t: type, p });
       else dropped++;
       continue;
     }
@@ -90,9 +91,7 @@ export function validateConfig(raw: unknown, catalog: Catalog): ValidationResult
           ? k.team.has(p)
           : need === 'player'
             ? k.player.has(p)
-            : need === 'tournament'
-              ? k.tournament.has(p)
-              : need === 'transfers'
+            : need === 'transfers'
                 ? p === 'all' || p === 'czsk' || k.league.has(p)
                 : false;
     if (ok) tiles.push({ t: type, p });

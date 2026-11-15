@@ -1248,6 +1248,7 @@ main.wrap {
     gap: var(--s6) var(--s5);
   }
   .dash > .tile--primary,
+  .dash > .tile--wide,
   .dash > .strip,
   .entity > .block--wide {
     grid-column: 1 / -1;
@@ -2154,6 +2155,35 @@ main.wrap {
     0 8px 16px -8px color-mix(in srgb, var(--accent) 70%, transparent);
 }
 
+/* ---------- mezinárodní turnaje: široká dlaždice s přepínačem turnajů vpravo nahoře ---------- */
+.tile--wide .tile-head {
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+.br-switch {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.br-switch button {
+  white-space: pre;
+}
+/* telefon: bez roku, aby se přepínač vešel vedle sebe */
+@media (max-width: 520px) {
+  .br-switch {
+    width: 100%;
+  }
+  .br-switch button {
+    flex: 1;
+    padding: 0 8px;
+  }
+  .br-yr {
+    display: none;
+  }
+}
+.br-pane > .tile-more {
+  margin-top: var(--s3);
+}
+
 /* ---------- pavouk (D22) ----------
    Sloupce kol vedle sebe, zápas je buňka o dvou řádcích (logo, kód, skóre). Sloupce se nikdy nemačkají pod
    --bm-min: když se nevejdou, pavouk se posouvá do strany, text z buněk nepřetéká. */
@@ -2407,27 +2437,76 @@ a.bm:hover {
     font-size: 1rem;
   }
 }
+.br-main,
+.br-side {
+  display: grid;
+  gap: var(--s4);
+  min-width: 0;
+}
+/* vítěz turnaje */
+.br-champ {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  max-width: 300px;
+  padding: 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 50%, var(--line));
+  border-radius: var(--r-lg);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 12%, var(--surface-2)), var(--surface));
+  box-shadow:
+    inset 0 1px 0 var(--hi),
+    0 3px 0 var(--depth),
+    0 0 26px -12px color-mix(in srgb, var(--accent) 80%, transparent);
+}
+.br-champ-label {
+  font: 700 0.68rem var(--font-ui);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.br-champ-team {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.br-champ-name {
+  overflow-wrap: anywhere;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.25rem;
+  line-height: 1.15;
+  letter-spacing: 0.03em;
+  text-decoration: none;
+}
+a.br-champ-name:hover {
+  color: var(--accent);
+}
 @container bracket (min-width: 760px) {
-  .bracket--double .br-body {
+  /* široké místo: pavouk uprostřed, vpravo sloupec s velkým finále a vítězem */
+  .br-body:has(.br-side) {
     grid-template-columns: minmax(0, max-content) minmax(190px, 260px);
-    justify-content: start;
-    grid-template-areas:
-      'upper final'
-      'lower final';
-    column-gap: var(--s5);
+    justify-content: center;
+    align-items: center;
+    column-gap: var(--s6);
   }
-  .br-part--upper {
-    grid-area: upper;
+  .br-body:not(:has(.br-side)) {
+    justify-content: center;
+    grid-template-columns: minmax(0, max-content);
   }
-  .br-part--lower {
-    grid-area: lower;
-  }
-  .br-part--final {
-    grid-area: final;
-    align-self: center;
-  }
-  .br-final {
+  .br-final,
+  .br-champ {
     max-width: none;
+  }
+  .br-champ {
+    flex-direction: column;
+    padding: var(--s4);
+    text-align: center;
+  }
+  .br-champ-team {
+    flex-direction: column;
   }
 }
 
@@ -2467,8 +2546,12 @@ html.spoilers [data-spoiler]:not(.revealed) .sp-name::after {
   color: var(--ink-3);
 }
 /* pavouk: skóre je otazník, na který se dá kliknout; vítěz se ničím neprozradí */
-html.spoilers .bm[data-spoiler]:not(.revealed) .sp-name .bm-code {
+html.spoilers .bm[data-spoiler]:not(.revealed) .sp-name .bm-code,
+html.spoilers .br-champ[data-spoiler]:not(.revealed) .br-champ-name {
   visibility: hidden;
+}
+html.spoilers .br-champ[data-spoiler]:not(.revealed) .sp-name {
+  cursor: var(--cur-go);
 }
 html.spoilers .bm[data-spoiler]:not(.revealed) .bm-sp {
   cursor: var(--cur-go);
