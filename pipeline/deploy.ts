@@ -91,9 +91,13 @@ export async function buildManifest(localDir: string): Promise<Manifest> {
   return out;
 }
 
-/** 0 = statické soubory a konfigurace serveru, 1 = data, 2 = stránky a ostatní, 3 = data/meta.json */
+/**
+ * 0 = statické soubory a konfigurace serveru, 1 = data, 2 = stránky a ostatní,
+ * 3 = service worker (ukládá si styly, skripty a stránky, které už na serveru musí být), 4 = data/meta.json
+ */
 export function phaseOf(path: string): number {
-  if (path === 'data/meta.json') return 3;
+  if (path === 'data/meta.json') return 4;
+  if (path === 'sw.js') return 3;
   if (path.startsWith('data/')) return 1;
   if (path.endsWith('.html') || path.endsWith('.ics')) return 2;
   return 0;

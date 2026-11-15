@@ -36,6 +36,13 @@ const menu = [
     <meta name="theme-color" content="#04110f" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#efe5cd" media="(prefers-color-scheme: light)" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!-- Aplikace (PWA): manifest pro instalaci, ikona a chování na iPhonu -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="LoL esport" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <slot name="head" />
     <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
     <script is:inline>
       // Režim (D18) a spoilery (D11) nastavit před vykreslením, ať nic nebliká.
@@ -154,9 +161,16 @@ const menu = [
     </main>
     <footer class="site-foot">
       <div class="wrap foot-cols">
-        <p>
-          Neoficiální fanouškovský projekt. Data: <a href="https://lolesports.com/" rel="noopener">lolesports.com</a>{' a '}<a href="https://lol.fandom.com/" rel="noopener">Leaguepedia</a> (licence CC BY-SA; přestupy, drby a národnost hráčů). Web se aktualizuje sám každých 15 minut.
-        </p>
+        <div>
+          <p>
+            Neoficiální fanouškovský projekt. Data: <a href="https://lolesports.com/" rel="noopener">lolesports.com</a>{' a '}<a href="https://lol.fandom.com/" rel="noopener">Leaguepedia</a> (licence CC BY-SA; přestupy, drby a národnost hráčů). Web se aktualizuje sám každých 15 minut.
+          </p>
+          <!-- Instalace jako aplikace: tlačítko se ukáže, až prohlížeč instalaci nabídne; na iPhonu jen nápověda. -->
+          <p class="install" data-install hidden>
+            <button class="btn btn--sm" type="button" data-action="install"><VNode node={icon('download')} />Nainstalovat jako aplikaci</button>
+          </p>
+          <p class="install" data-install-ios hidden>Jako aplikace na iPhonu: v Safari klepni na Sdílet a zvol „Přidat na plochu“.</p>
+        </div>
         <p lang="en">
           LoL esport česky isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.
         </p>
@@ -172,8 +186,10 @@ const menu = [
     <script>
       import { initCommon } from '../client/common';
       import { initFx } from '../client/fx';
+      import { initPwa } from '../client/pwa';
       initCommon();
       initFx();
+      initPwa();
       document.documentElement.dataset.js = '1'; // skripty jsou navěšené (čekají na to testy)
     </script>
   </body>

@@ -10,6 +10,8 @@ export default defineConfig({
     baseURL: 'http://127.0.0.1:4321',
     locale: 'cs-CZ',
     timezoneId: 'Europe/Prague',
+    // Service worker ukládá stránky a data; ostatní testy mají vidět web přímo. Zapíná ho jen e2e/pwa.spec.ts.
+    serviceWorkers: 'block',
   },
   projects: [
     { name: 'desktop', use: { ...devices['Desktop Chrome'] } },

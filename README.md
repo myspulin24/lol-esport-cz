@@ -12,6 +12,7 @@ zápasy, výsledky, tabulky, soupisky a přestupy, postaví z nich statický web
 - **Detail zápasu** (`/zapas/<id>/`): výsledek série a každá hra zvlášť: strany, sestavy a šampioni, zákazy, zabití, zlato, věže, draci, baroni, záznam.
 - **Soupiska týmu** s přepínačem „Aktuální / Další split · odhad“ (potvrzené změny a spekulace z přestupů).
 - Stránky lig, turnajů, týmů a hráčů s vlajkami států, kalendáře `.ics`, hledání s našeptávačem, režim bez spoilerů, světlý a tmavý režim.
+- **Aplikace (PWA)**: web jde nainstalovat na plochu telefonu i počítače a navštívené stránky fungují bez připojení.
 
 ## Vyzkoušet na svém počítači
 
@@ -48,6 +49,20 @@ repozitář, právo Actions: Read and write, bez data vypršení). Token je ulo�
 Nasazení je navržené tak, aby nic nerozbilo běžící web: soubory se nahrávají pod dočasným jménem a pak
 přejmenují, `data/meta.json` jde vždy poslední, přerušený běh příští běh dorovná, mazání starých souborů
 se zastaví, pokud by nový build byl o víc než 20 % menší než ten minulý.
+
+## Aplikace (PWA)
+
+Web se dá nainstalovat jako aplikace: v Chromu a Edgi tlačítkem „Nainstalovat jako aplikaci“ v patičce (nebo ikonou
+v adresním řádku), na iPhonu v Safari přes Sdílet → Přidat na plochu. Instalace nic nemění na tom, jak se web obnovuje.
+
+- `site/public/manifest.webmanifest`: název, barvy, ikony a zkratky aplikace.
+- `site/public/icons/`: ikony vyrobené ze znaku (`node scripts/make-icons.mjs`, spouští se jen při změně znaku).
+- `site/sw.template.js`: service worker. Stránky a data bere nejdřív ze sítě a při výpadku z poslední uložené kopie,
+  soubory s otiskem v názvu (`_astro/`) z uložené kopie. Při instalaci si uloží hlavní stránky, styly, skripty, písma
+  a data, takže dashboard a výsledky fungují offline hned. Nenavštívená stránka bez připojení ukáže `/offline/`.
+- `scripts/make-sw.mjs` (běží v `npm run build` po Astru): doplní do šablony seznam souborů a verzi a zapíše `dist/sw.js`.
+  Verze se mění jen se styly, skripty, sadou datových souborů nebo šablonou; běžná obnova dat service worker nemění.
+- Upozornění (push) web neposílá: potřebovala by server, který statický hosting nemá.
 
 ## Spuštění na lol.godmike.cz (jednorázově)
 

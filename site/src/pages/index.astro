@@ -25,6 +25,7 @@ const nodes = renderDashboard(tiles, data);
         <button class="btn btn--ghost" type="button" data-action="reset">Obnovit výchozí</button>
       </span>
       <button class="btn btn--ghost" type="button" data-action="share"><VNode node={icon('share')} />Sdílet</button>
+      <button class="btn btn--ghost" type="button" data-action="install" data-install hidden><VNode node={icon('download')} />Nainstalovat</button>
     </div>
   </div>
   <div class="dash" data-dash>

@@ -122,6 +122,10 @@ Plynulost přechodů (pravidla, která je potřeba držet):
   nemačkají pod `--bm-min` a neroztahují nad `--bm-max`: když se nevejdou, pavouk se posouvá do strany, text
   z buněk nikdy nepřetéká. Play-off na dvě prohry (MSI) má horní pavouk, pod ním dolní a velké finále (od 760 px
   vpravo vedle nich). Bez spoilerů: skóre je otazník, na který se kliká; od druhého kola jsou skrytá i jména týmů.
+- **Aplikace (PWA)**: ikona je znak na tmavém pozadí s okrajem (systém si ji sám ořízne do kruhu nebo zaobleného
+  čtverce). Tlačítko „Nainstalovat“ je v patičce a mezi akcemi dashboardu a ukáže se, jen když prohlížeč instalaci
+  nabízí; žádná vyskakovací výzva. Stránka `/offline/` je jedna deska s tlačítkem „Zkusit znovu“ a odkazy na
+  hlavní stránky.
 - **Starty lig** (dlaždice na dashboardu, přes celou šířku): karta pro každou ligu, vlevo logo a název, vpravo velké
   číslo dní do startu; stavy „hraje se“ a „termín zatím není znám“. Bez výběru ligy ukáže všechny, rozdělené na
   hlavní ligy, regionální ligy a mezinárodní turnaje. Sousední dlaždice se starty se spojí do jedné desky.

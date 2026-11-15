@@ -25,6 +25,9 @@ Bez výslovného pokynu necommitovat, nepushovat a nenasazovat.
   `npm run deploy -- --check`, `npm run deploy` opakovat do „zbývá 0“ a nakonec `gh variable delete DEPLOY_PAUSED`.
 - Do větve `data` zapisuje jen automatický běh (robot). Ručně do ní nepushovat a nezakládat z ní pull request:
   jsou v ní jen uložená data, ne kód, a po ručním pushi GitHub majiteli ukazuje výzvu „Compare & pull request“.
+- `dist/sw.js` (service worker aplikace) vzniká až po buildu ze `site/sw.template.js` (`scripts/make-sw.mjs`, součást
+  `npm run build`); upravuje se šablona, ne výsledek. V testech v prohlížeči je service worker vypnutý, zapíná ho jen
+  `e2e/pwa.spec.ts`. Při místním náhledu ukládá stránky i prohlížeč: po změně stylu obnovit stránku dvakrát.
 - Texty webu jsou česky. Vzhled a pravidla animací drží `DESIGN.md`; při změně vzhledu ho aktualizovat.
 - Obsah z cizích zdrojů se nikdy nevkládá jako HTML (`shared/vnode.ts`, žádné `innerHTML`).
 

@@ -14,6 +14,7 @@ const PATHS: Record<string, string[]> = {
   up: ['M6 15l6-6 6 6'],
   close: ['M6 6l12 12', 'M18 6L6 18'],
   plus: ['M12 5v14', 'M5 12h14'],
+  download: ['M12 4v11', 'M7 10.5l5 5 5-5', 'M5 20h14'],
   check: ['M5 12l5 5 9-10'],
   roleTop: ['M8 21V9l4-5 4 5v12z', 'M8 13h8'],
   roleJungle: ['M5 19c0-8 5-13 14-14-1 9-6 14-14 14z', 'M5 19l8-8'],

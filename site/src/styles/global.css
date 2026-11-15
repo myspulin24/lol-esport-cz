@@ -3088,6 +3088,37 @@ html.spoilers [data-spoiler].revealed .m-status .sp {
 .site-foot a {
   color: var(--ink-2);
 }
+/* instalace jako aplikace (PWA) */
+.site-foot .install {
+  margin-top: var(--s3);
+}
+.install .btn {
+  color: var(--ink);
+}
+/* stránka pro chvíle bez připojení */
+.offline {
+  display: grid;
+  gap: var(--s3);
+  max-width: 44rem;
+  padding: var(--s5);
+}
+.offline p {
+  margin: 0;
+  color: var(--ink-2);
+}
+.offline .offline-lead {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.3rem;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+}
+.offline-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: var(--s2);
+}
 /* ---------- horní pruh se značkou: přes celou šířku stránky, nad hlavičkou ---------- */
 .top-strip {
   display: flex;

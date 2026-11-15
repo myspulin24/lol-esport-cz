@@ -1,0 +1,27 @@
+---
+// Stránka, kterou service worker ukáže, když není připojení a požadovaná stránka ještě není uložená.
+import Base from '../layouts/Base.astro';
+import VNode from '../components/VNode.astro';
+import { icon } from '../../../shared/icons';
+---
+<Base title="Bez připojení" description="Stránka pro chvíle bez připojení k internetu.">
+  <meta slot="head" name="robots" content="noindex" />
+  <div class="page-head">
+    <h1>Bez připojení</h1>
+  </div>
+  <section class="slab offline">
+    <p class="offline-lead">Tahle stránka ještě není uložená a bez internetu ji nejde načíst.</p>
+    <p>Stránky, které jsi už otevřel, fungují dál a ukazují poslední stažená data.</p>
+    <p class="offline-acts">
+      <button class="btn btn--primary" type="button" data-action="retry">Zkusit znovu</button>
+      <a class="btn" href="/"><VNode node={icon('home')} />Můj dashboard</a>
+      <a class="btn" href="/vysledky/"><VNode node={icon('list')} />Výsledky</a>
+      <a class="btn" href="/prestupy/"><VNode node={icon('swap')} />Přestupy</a>
+    </p>
+  </section>
+  <script>
+    document.querySelector('[data-action="retry"]')?.addEventListener('click', () => location.reload());
+    // jakmile se připojení vrátí, načíst stránku, kterou člověk chtěl (adresa zůstala v řádku)
+    window.addEventListener('online', () => location.reload());
+  </script>
+</Base>
