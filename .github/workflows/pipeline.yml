@@ -4,12 +4,14 @@ name: Data a nasazení
 
 on:
   schedule:
-    - cron: '*/15 * * * *'
+    # Každých 15 minut, schválně mimo celou hodinu a čtvrthodiny: v těch časech má GitHub nejvíc práce
+    # a plánované běhy zpožďuje nebo vynechává.
+    - cron: '7,22,37,52 * * * *'
     - cron: '17 4 1 * *' # jednou měsíčně: udržet plánované spouštění (GitHub ho po 60 dnech bez aktivity vypíná)
   workflow_dispatch:
     inputs:
       force_all:
-        description: 'Stáhnout i Leaguepedii (jinak jen v první čtvrthodině každé hodiny)'
+        description: 'Stáhnout i Leaguepedii hned (jinak nejvýš jednou za hodinu)'
         type: boolean
         default: false
 
