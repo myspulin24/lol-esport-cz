@@ -1,0 +1,38 @@
+# DOČASNÉ: zjišťuje, proč se běh na GitHubu nepřihlásí k FTP. Žádnou hodnotu nevypisuje:
+# uložené údaje porovnává s kontrolními otisky (také uloženými jako Secrets) a hlásí jen „sedí / nesedí“.
+name: Diagnostika FTP (dočasné)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      FTP_HOST: ${{ secrets.FTP_HOST }}
+      FTP_USER: ${{ secrets.FTP_USER }}
+      FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+    steps:
+      - name: Jsou údaje na GitHubu stejné jako na počítači?
+        env:
+          N: ${{ secrets.CHK_NONCE }}
+          CH: ${{ secrets.CHK_HOST }}
+          CU: ${{ secrets.CHK_USER }}
+          CP: ${{ secrets.CHK_PASS }}
+        run: |
+          chk() { printf '%s%s' "$N" "$1" | sha256sum | cut -d' ' -f1; }
+          [ "$(chk "$FTP_HOST")" = "$CH" ] && echo "adresa serveru: sedí" || echo "adresa serveru: NESEDÍ"
+          [ "$(chk "$FTP_USER")" = "$CU" ] && echo "uživatel: sedí" || echo "uživatel: NESEDÍ"
+          [ "$(chk "$FTP_PASSWORD")" = "$CP" ] && echo "heslo: sedí" || echo "heslo: NESEDÍ"
+
+      - name: Odkud běh přichází
+        run: curl -s -m 15 https://ipinfo.io/json | grep -E '"(country|region|org)"' || echo "nepodařilo se zjistit"
+
+      - name: Přihlášení k FTP (šifrovaně)
+        run: |
+          if curl -sS -m 40 --ssl-reqd --user "$FTP_USER:$FTP_PASSWORD" "ftp://$FTP_HOST/" -o /dev/null; then
+            echo "přihlášení: PROŠLO"
+          else
+            echo "přihlášení: SELHALO (kód curl $?)"
+          fi
