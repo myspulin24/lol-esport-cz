@@ -3718,17 +3718,14 @@ a.tref:hover {
     align-items: stretch;
     margin-bottom: 0;
   }
+  /* Fotka dole mizí do průhledna, takže pod ní je vidět sama karta; přezdívka ji překrývá. Je to maska, ne
+     překryvná vrstva v barvě karty: pod překryvem při zvedání karty prosvítal tmavý řádek fotky (čárka pod
+     jménem) a jeho barva navíc neseděla s pozadím karty. Poslední 2 px jsou úplně průhledné. */
   .lu-photo {
     width: 100%;
     aspect-ratio: 5 / 4;
-  }
-  /* fotka dole přechází do karty, přezdívka ji překrývá */
-  .lu-photo::after {
-    content: '';
-    position: absolute;
-    inset: auto 0 0;
-    height: 46%;
-    background: linear-gradient(180deg, transparent, var(--surface-2));
+    -webkit-mask: linear-gradient(180deg, #000 54%, transparent calc(100% - 2px)) no-repeat;
+    mask: linear-gradient(180deg, #000 54%, transparent calc(100% - 2px)) no-repeat;
   }
   .lu-tag {
     display: block;

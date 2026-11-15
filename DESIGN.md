@@ -93,7 +93,9 @@ Plynulost přechodů (pravidla, která je potřeba držet):
 - **Soupiska** (stránka týmu, přes celou šířku; dlaždice na dashboardu): sestava po pozicích jako hráčské karty.
   Jedna mřížka: sloupec = pozice (nadpis s ikonou pozice), řada = pořadí hráče na pozici; řady jsou stejně vysoké,
   takže **všechny karty mají stejnou výšku**. Karta: fotka přes celou šířku, která dole přechází do karty, přes ni
-  přezdívka s vlajkou, pod ní jméno na jeden řádek. V úzkém kontejneru (pod 900 px) je to seznam s malou fotkou vlevo.
+  přezdívka s vlajkou, pod ní jméno na jeden řádek. Přechod je maska (fotka mizí do průhledna), ne překryvná vrstva
+  v barvě karty: pod překryvem při najetí prosvítala tmavá čárka pod jménem.
+  V úzkém kontejneru (pod 900 px) je to seznam s malou fotkou vlevo.
   Přepínač Aktuální / Další split · odhad (s počtem odchodů a příchodů).
 - **Odhad soupisky**: stejné karty a na spodku každé stavový pruh (má ho i hráč, který zůstává, kvůli stejné výšce):
   „zůstává“ (mátový), „přichází ← tým“ (zelený, štítek „posila“), „možná odejde → tým“ a „možná přijde ← tým“
