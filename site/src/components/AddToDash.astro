@@ -1,0 +1,21 @@
+---
+// D6 blok 5: akce „Přidat na můj dashboard“ (dashboard přidá dlaždici přes ?add=typ:parametr).
+import VNode from './VNode.astro';
+import { icon } from '../../../shared/icons';
+
+interface Props {
+  type: string;
+  param?: string;
+  label: string;
+  ics?: string;
+}
+const { type, param, label, ics } = Astro.props;
+const href = `/?add=${encodeURIComponent(param ? `${type}:${param}` : type)}`;
+---
+<section class="block block--wide">
+  <h2>Na můj dashboard</h2>
+  <p class="actions" style="display:flex;gap:8px;flex-wrap:wrap;margin:0">
+    <a class="btn btn--primary" href={href}><VNode node={icon('plus')} />{label}</a>
+    {ics && <a class="btn btn--ghost" href={ics}><VNode node={icon('calendar')} />Zápasy do kalendáře (.ics)</a>}
+  </p>
+</section>

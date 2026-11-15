@@ -1,0 +1,17 @@
+# Liga → čeští costreameři („Česky obvykle: X“ u zápasů dané ligy).
+# Klíč = slug ligy z lolesports: lck, lpl, lec, lcs, cblol-brazil, lcp, hitpoint_masters, first_stand, msi, worlds.
+# Neznámý klíč ligy zastaví build (ochrana proti překlepu, který by tiše schoval odkazy).
+# Mění se zhruba na začátku splitu (vědomá výjimka z nulové údržby).
+#
+# Příklad:
+# lec:
+#   - name: Jméno streamera
+#     url: https://www.twitch.tv/jmeno
+lec: []
+lck: []
+lpl: []
+lcs: []
+worlds: []
+msi: []
+first_stand: []
+hitpoint_masters: []

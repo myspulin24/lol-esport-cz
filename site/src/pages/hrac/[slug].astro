@@ -1,0 +1,55 @@
+---
+import Base from '../../layouts/Base.astro';
+import VNode from '../../components/VNode.astro';
+import AddToDash from '../../components/AddToDash.astro';
+import { loadData, allTeams } from '../../lib/data';
+import { leagueName, leagueShort } from '../../../../shared/leagues';
+import { roleCs, formatRelativeDay } from '../../../../shared/format';
+import { teamKey } from '../../../../shared/team-key';
+import { matchRow, rosterList, transferRow, flag, nextMatchOf, freshness } from '../../../../shared/render';
+import { countryName } from '../../../../shared/countries';
+import { thumbUrl } from '../../../../shared/safe-url';
+import { h } from '../../../../shared/vnode';
+import type { Player, Team } from '../../../../shared/types';
+
+export function getStaticPaths() {
+  return allTeams().flatMap((t) => t.players.map((p) => ({ params: { slug: p.slug }, props: { player: p, team: t } })));
+}
+const { player, team } = Astro.props as { player: Player; team: Team };
+const data = loadData();
+const next = nextMatchOf(team.slug, data, data.now);
+const transfers = (data.transfers ?? []).filter((t) => t.player.toLowerCase() === player.handle.toLowerCase()).slice(0, 10);
+// Oficiální soupiska (lolesports) se po odchodu aktualizuje se zpožděním; Leaguepedia bývá rychlejší.
+const left = transfers.find((t) => t.status === 'confirmed' && t.type !== 'join' && t.type !== 'role' && t.from && teamKey(t.from) === teamKey(team.name));
+---
+<Base title={player.handle} description={`${player.handle}${player.name ? ` (${player.name})` : ''}: ${roleCs(player.role)} v týmu ${team.name}.`}>
+  <div class="page-head">
+    {player.image && <img class="portrait" src={thumbUrl(player.image, 420)} data-full={player.image} alt={`${player.handle}, fotografie`} width="176" height="176" />}
+    <div>
+      <h1>{player.handle}</h1>
+      <p class="id-line">
+        {player.name && <span>{player.name}</span>}
+        <span>{roleCs(player.role)}</span>
+        <a href={`/tym/${team.slug}/`}>{team.name}</a>
+        <a href={`/liga/${leagueShort(team.league)}/`}>{leagueName(team.league)}</a>
+        {player.country && <span class="id-flag"><VNode node={flag(player.country)} />{countryName(player.country)}</span>}
+      </p>
+      {left && <p class="note-line">Podle Leaguepedie už v týmu {team.name} nehraje (změna {formatRelativeDay(left.date + 'T12:00:00Z', data.now)}{left.to ? <>, nově {left.to}</> : null}). Oficiální soupiska se ještě neaktualizovala.</p>}
+    </div>
+  </div>
+  <div class="entity">
+    <section class="block block--wide">
+      <h2>Příští zápas týmu <VNode node={freshness('lolesports', data.meta, data.now)} /></h2>
+      {next ? <VNode node={h('div', { class: 'mlist' }, matchRow(next, { now: data.now, showDate: true, streamers: data.streamers[next.league] }))} /> : <p class="empty">Další zápas zatím není v rozpisu.</p>}
+    </section>
+    <section class="block">
+      <h2>Soupiska · {team.code}</h2>
+      <VNode node={rosterList(team)} />
+    </section>
+    <section class="block">
+      <h2>Přestupy <VNode node={freshness('leaguepedia', data.meta, data.now)} /></h2>
+      {transfers.length ? <VNode node={h('ul', { class: 'trlist' }, ...transfers.map((t) => transferRow(t, data.now)))} /> : <p class="empty">Za posledních 45 dní žádná změna.</p>}
+    </section>
+    <AddToDash type="player" param={player.slug} label={`Sledovat ${player.handle} na dashboardu`} ics={`/ics/tym-${team.slug}.ics`} />
+  </div>
+</Base>

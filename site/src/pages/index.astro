@@ -1,0 +1,38 @@
+---
+import Base from '../layouts/Base.astro';
+import VNode from '../components/VNode.astro';
+import { loadData } from '../lib/data';
+import { defaultTiles, renderDashboard } from '../../../shared/render';
+import { icon } from '../../../shared/icons';
+
+// D8: výchozí dashboard je předgenerovaný v HTML (žádné bliknutí); prohlížeč ho pak přepočítá.
+const data = loadData();
+const tiles = defaultTiles(data);
+const nodes = renderDashboard(tiles, data);
+---
+<Base nav="dash">
+  <Fragment slot="bars">
+    <div class="bar bar--compact" data-bar="shared" hidden></div>
+    <div class="bar" data-bar="save" hidden></div>
+    <div class="bar" data-bar="note" hidden></div>
+  </Fragment>
+  <div class="page-head">
+    <h1 class="sr-only">Můj dashboard</h1>
+    <div class="actions">
+      <button class="btn" type="button" data-action="edit" aria-pressed="false"><VNode node={icon('edit')} /><span data-edit-label>Upravit dashboard</span></button>
+      <span data-edit-tools hidden>
+        <button class="btn" type="button" data-action="catalog"><VNode node={icon('plus')} />Přidat dlaždici</button>
+        <button class="btn btn--ghost" type="button" data-action="reset">Obnovit výchozí</button>
+      </span>
+      <button class="btn btn--ghost" type="button" data-action="share"><VNode node={icon('share')} />Sdílet</button>
+    </div>
+  </div>
+  <div class="dash" data-dash>
+    <VNode node={nodes} />
+  </div>
+  <aside class="catalog" data-catalog hidden aria-label="Katalog dlaždic"></aside>
+  <script>
+    import { initDashboard } from '../client/dashboard';
+    initDashboard();
+  </script>
+</Base>

@@ -1,0 +1,4 @@
+# Soubory v _astro/ mají v názvu otisk obsahu, takže se nikdy nemění: cache na rok.
+<IfModule mod_headers.c>
+  Header set Cache-Control "public, max-age=31536000, immutable"
+</IfModule>

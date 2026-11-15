@@ -1,0 +1,180 @@
+---
+import '../styles/global.css';
+import VNode from '../components/VNode.astro';
+import Emblem from '../components/Emblem.astro';
+import Scene from '../components/Scene.astro';
+import { icon } from '../../../shared/icons';
+import { TRACKED_LEAGUES } from '../../../shared/leagues';
+
+interface Props {
+  title?: string;
+  description?: string;
+  nav?: 'dash' | 'results' | 'transfers' | 'czsk' | 'search' | 'leagues' | 'none';
+}
+const { title, description = 'Český přehled LoL esportu: dnešní zápasy v našem čase, výsledky lig, přestupy a Češi a Slováci ve světě.', nav = 'none' } = Astro.props;
+const fullTitle = title ? `${title} · LoL esport česky` : 'LoL esport česky';
+const goat = import.meta.env.PUBLIC_GOATCOUNTER as string | undefined;
+const items = [
+  { key: 'dash', href: '/', label: 'Můj', ic: 'home' },
+  { key: 'results', href: '/vysledky/', label: 'Výsledky', ic: 'list' },
+  { key: 'transfers', href: '/prestupy/', label: 'Přestupy', ic: 'swap' },
+  { key: 'czsk', href: '/cesi/', label: 'Češi', ic: 'flag' },
+] as const;
+const menu = [
+  { title: 'Hlavní ligy', items: TRACKED_LEAGUES.filter((l) => l.group === 'major'), region: true },
+  { title: 'Česko a Slovensko', items: TRACKED_LEAGUES.filter((l) => l.group === 'regional'), region: false },
+  { title: 'Mezinárodní turnaje', items: TRACKED_LEAGUES.filter((l) => l.group === 'international'), region: false },
+];
+---
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#04110f" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#efe5cd" media="(prefers-color-scheme: light)" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
+    <script is:inline>
+      // Režim (D18) a spoilery (D11) nastavit před vykreslením, ať nic nebliká.
+      // Bez uložené volby rozhoduje nastavení zařízení; když ho prohlížeč nezná, platí tmavý (výchozí v CSS).
+      var root = document.documentElement;
+      // Pozadí (runové kruhy, krystaly, záře) běží podle hodin, ne od načtení stránky:
+      // při přechodu mezi stránkami tak plynule pokračuje a neskočí na začátek.
+      // Zmenšené fotky jdou přes obrázkovou službu; když neodpoví, použije se původní obrázek (atribut data-full).
+      document.addEventListener(
+        'error',
+        function (e) {
+          var t = e.target;
+          if (t && t.tagName === 'IMG' && t.dataset.full && t.getAttribute('src') !== t.dataset.full) t.src = t.dataset.full;
+        },
+        true,
+      );
+      var syncClock = function () {
+        root.style.setProperty('--clock', String(Date.now() % 86400000));
+      };
+      syncClock();
+      // Stránka připravená dopředu (najetí na odkaz) nebo vrácená tlačítkem Zpět stála: při zobrazení hodiny srovnat,
+      // jinak by pozadí bylo o tu dobu pozadu a při přechodu by poskočilo.
+      document.addEventListener('prerenderingchange', syncClock);
+      window.addEventListener('pageshow', function (e) {
+        if (e.persisted) syncClock();
+      });
+      try {
+        var t = localStorage.getItem('theme');
+        if (t === 'light' || t === 'dark') root.dataset.theme = t;
+        if (localStorage.getItem('spoilers') === 'hide') root.classList.add('spoilers');
+        // Úvodní „vynoření“ desek jen při příchodu na web; při přechodu mezi stránkami se nepřehrává.
+        if (sessionStorage.getItem('intro')) {
+          root.classList.add('nav');
+          root.style.setProperty('--t0', '1000000ms');
+        } else sessionStorage.setItem('intro', '1');
+        // Vlastní dashboard nebo vlastní výběr výsledků: neukazovat nejdřív výchozí obsah (viz html.wait-own v CSS).
+        var p = location.pathname;
+        if (
+          (p === '/' && (localStorage.getItem('dashboard:v1') || location.hash.indexOf('#d=') === 0 || /[?&]add=/.test(location.search))) ||
+          (p === '/vysledky/' && (localStorage.getItem('results:leagues') || localStorage.getItem('results:period') || /[?&]l=/.test(location.search)))
+        )
+          root.classList.add('wait-own');
+      } catch (e) {}
+    </script>
+    <!-- Chrome a Edge: stránka se po najetí na odkaz připraví na pozadí, přepnutí je pak okamžité.
+         Odkazy s akcí (?add=) a soubory (.ics) se nepřipravují. -->
+    <script type="speculationrules" is:inline set:html={JSON.stringify({
+      prerender: [{ where: { and: [{ href_matches: '/*' }, { not: { selector_matches: "[href*='add='], [href^='/ics/'], [target='_blank'], [download]" } }] }, eagerness: 'moderate' }],
+    })}></script>
+    {goat && <script is:inline data-goatcounter={`https://${goat}.goatcounter.com/count`} async src="https://gc.zgo.at/count.js"></script>}
+  </head>
+  <body>
+    <Scene />
+    <a class="sr-only" href="#obsah">Přeskočit na obsah</a>
+    <p class="top-strip">
+      <span>LoL esport česky</span>
+      <span class="ts-line" aria-hidden="true"></span>
+      <span>web <b>God Mike</b></span>
+      <span class="ts-line" aria-hidden="true"></span>
+      <span>lol.godmike.cz</span>
+    </p>
+    <header class="site-head">
+      <div class="wrap head-row">
+        <a class="brand" href="/" aria-label="LoL esport česky, na můj dashboard">
+          <Emblem />
+          <span class="brand-text">LoL esport <b>česky</b></span>
+        </a>
+        <nav class="top-nav" aria-label="Hlavní navigace">
+          {items.map((it) => <a href={it.href} aria-current={nav === it.key ? 'page' : undefined}>{it.label === 'Můj' ? 'Můj dashboard' : it.label}</a>)}
+        </nav>
+        <div class="head-tools">
+          <form class="search" role="search" action="/hledat/" data-search>
+            <VNode node={icon('search')} />
+            <label class="sr-only" for="q">Hledat tým nebo hráče</label>
+            <input id="q" name="q" type="text" inputmode="search" enterkeyhint="search" placeholder="Tým, hráč nebo liga" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="q-list" aria-autocomplete="list" />
+            <div class="search-panel" id="q-list" role="listbox" aria-label="Výsledky hledání" data-search-panel hidden></div>
+          </form>
+          <details class="leagues-menu" data-menu>
+            <summary class="tool" aria-label="Ligy a turnaje"><span class="lbl">Ligy</span><VNode node={icon('down', 'ic ic-s')} /></summary>
+            <div class="menu-panel">
+              {
+                menu.map((g) => (
+                  <div class="menu-group">
+                    <p class="menu-h">{g.title}</p>
+                    <ul>
+                      {g.items.map((l) => (
+                        <li>
+                          <a href={`/liga/${l.short}/`}>
+                            <span class="menu-name">{l.name}</span>
+                            {g.region && <span class="menu-region">{l.region}</span>}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))
+              }
+            </div>
+          </details>
+          <button class="tool tool--spoil" type="button" data-action="spoilers" aria-pressed="false" title="Skrýt nebo ukázat výsledky (režim bez spoilerů)">
+            <VNode node={icon('eye', 'ic ic-eye')} /><VNode node={icon('eyeoff', 'ic ic-eyeoff')} />
+            <span class="lbl hide-m"><span class="lbl-off">Se spoilery</span><span class="lbl-on">Bez spoilerů</span></span>
+          </button>
+          <button class="tool tool--theme" type="button" data-action="theme" aria-label="Přepnout světlý / tmavý režim">
+            <VNode node={icon('sun', 'ic ic-sun')} /><VNode node={icon('moon', 'ic ic-moon')} />
+          </button>
+        </div>
+      </div>
+    </header>
+    <div class="bar bar--warn" data-stale-bar role="status" aria-live="polite" hidden>
+      <span class="bar-text" data-stale-text></span>
+    </div>
+    <slot name="bars" />
+    <main id="obsah" class="wrap">
+      <slot />
+    </main>
+    <footer class="site-foot">
+      <div class="wrap foot-cols">
+        <p>
+          Neoficiální fanouškovský projekt. Data: <a href="https://lolesports.com/" rel="noopener">lolesports.com</a>{' a '}<a href="https://lol.fandom.com/" rel="noopener">Leaguepedia</a> (licence CC BY-SA; přestupy, drby a národnost hráčů). Web se aktualizuje sám každých 15 minut.
+        </p>
+        <p lang="en">
+          LoL esport česky isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.
+        </p>
+        <p>
+          LoL esport česky není schválen společností Riot Games a nevyjadřuje názory Riot Games ani nikoho, kdo se oficiálně podílí na tvorbě nebo správě jejích značek. Riot Games a všechny související značky jsou ochranné známky nebo registrované ochranné známky společnosti Riot Games, Inc.
+        </p>
+      </div>
+    </footer>
+    <nav class="tab-nav" aria-label="Hlavní navigace">
+      {items.map((it) => <a href={it.href} aria-current={nav === it.key ? 'page' : undefined}><VNode node={icon(it.ic)} />{it.label}</a>)}
+      <a href="/hledat/" aria-current={nav === 'search' ? 'page' : undefined}><VNode node={icon('search')} />Hledat</a>
+    </nav>
+    <script>
+      import { initCommon } from '../client/common';
+      import { initFx } from '../client/fx';
+      initCommon();
+      initFx();
+      document.documentElement.dataset.js = '1'; // skripty jsou navěšené (čekají na to testy)
+    </script>
+  </body>
+</html>

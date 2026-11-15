@@ -1,0 +1,30 @@
+---
+// Znak webu: „God Mike“ = písmeno M se svatozáří v šestiúhelníkovém štítu. Stejný motiv jako favicon.svg,
+// tady s animovanými částmi (svatozář, drahokam). Na stránce jen jednou (id přechodů jsou pevná).
+interface Props {
+  size?: number;
+}
+const { size = 38 } = Astro.props;
+---
+<svg class="emblem" viewBox="0 0 64 64" width={size} height={size} aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="em-rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffd09a"></stop>
+      <stop offset=".5" stop-color="#ff8f45"></stop>
+      <stop offset="1" stop-color="#a8430f"></stop>
+    </linearGradient>
+    <linearGradient id="em-body" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1a4c42"></stop>
+      <stop offset="1" stop-color="#04110f"></stop>
+    </linearGradient>
+    <linearGradient id="em-m" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fffaf0"></stop>
+      <stop offset="1" stop-color="#dccba6"></stop>
+    </linearGradient>
+  </defs>
+  <path class="em-hex" d="M32 3 57 17.5v29L32 61 7 46.5v-29z" fill="url(#em-body)" stroke="url(#em-rim)" stroke-width="3.2" stroke-linejoin="round"></path>
+  <path d="M32 9.5 51.4 20.7v22.6L32 54.5 12.6 43.3V20.7z" fill="none" stroke="#5cf2c2" stroke-opacity=".4"></path>
+  <path class="em-m" d="M18 46V22h5l9 10.5L41 22h5v24h-6V32.5l-8 9.3-8-9.3V46z" fill="url(#em-m)"></path>
+  <ellipse class="em-halo" cx="32" cy="14.5" rx="10.5" ry="3.4" fill="none" stroke="#ffd27a" stroke-width="2.6"></ellipse>
+  <path class="em-gem" d="M32 45.5l3.2 4-3.2 4-3.2-4z" fill="#5cf2c2"></path>
+</svg>

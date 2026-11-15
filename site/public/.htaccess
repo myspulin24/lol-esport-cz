@@ -1,0 +1,48 @@
+# Forpsi (Apache): statický web z GitHub Actions. Soubor nahrává deploy, ručně neupravovat na serveru.
+Options -Indexes
+DirectoryIndex index.html
+ErrorDocument 404 /404.html
+
+AddType text/calendar .ics
+AddType application/json .json
+AddCharset utf-8 .html .json .ics .css .js .svg
+
+# Interní soubory deploye a konfigurace pro jiný server nejsou pro návštěvníky.
+<IfModule mod_authz_core.c>
+  <FilesMatch "^(\.deploy-manifest\.json|web\.config)$|\.tmp-[0-9a-f]+$">
+    Require all denied
+  </FilesMatch>
+</IfModule>
+
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  # Stránky a kalendáře: 5 minut (web se obnovuje každých 15 minut).
+  <FilesMatch "\.(html|ics)$">
+    Header set Cache-Control "public, max-age=300"
+  </FilesMatch>
+  # Data: krátce; prohlížeč si je stejně bere s ?v=buildId.
+  <FilesMatch "\.json$">
+    Header set Cache-Control "public, max-age=60"
+  </FilesMatch>
+  # meta.json říká, která data jsou nejnovější: vždy ověřit u serveru.
+  <FilesMatch "^meta\.json$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>
+
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/calendar application/javascript application/json image/svg+xml
+</IfModule>
+
+# Jediná kanonická adresa: https:// bez www. Hosting stojí za proxy, proto se hlídá i X-Forwarded-Proto
+# (stejné pravidlo fungovalo u předchozího webu na této subdoméně).
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTPS} !=on [OR]
+  RewriteCond %{HTTP:X-Forwarded-Proto} =http [OR]
+  RewriteCond %{HTTP_HOST} ^www\. [NC]
+  RewriteCond %{HTTP_HOST} ^(?:www\.)?(.+)$ [NC]
+  RewriteRule ^ https://%1%{REQUEST_URI} [R=301,L]
+</IfModule>

@@ -1,0 +1,23 @@
+---
+// Pozadí „svět za webem“: dva runové kruhy ležící v prostoru (3D náklon, pomalá rotace), plovoucí krystaly,
+// stoupající jiskry (canvas, kreslí client/fx.ts) a jemné zrno. Čistě dekorativní: aria-hidden, bez vlivu na obsah.
+// Kresba kruhu je v jednom sdíleném souboru /ring.svg (scripts/make-ring.mjs) a používá se jako maska:
+// stránky ji v sobě nenesou (ušetří ~17 kB na každé stránce) a barvu bere z CSS (--ring).
+---
+<div class="scene" aria-hidden="true" data-scene>
+  <div class="scene-glow scene-glow--a"></div>
+  <div class="scene-glow scene-glow--b"></div>
+  <div class="scene-ring scene-ring--a"><div class="ring-img"></div></div>
+  <div class="scene-ring scene-ring--b"><div class="ring-img"></div></div>
+  {
+    [1, 2, 3].map((n) => (
+      <svg class={`shard shard--${n}`} viewBox="0 0 60 140">
+        <polygon class="shard-l" points="30,0 6,42 30,140" />
+        <polygon class="shard-r" points="30,0 54,42 30,140" />
+        <polygon class="shard-c" points="30,0 37,44 30,140 23,44" />
+      </svg>
+    ))
+  }
+  <canvas class="scene-embers" data-embers></canvas>
+  <div class="scene-grain"></div>
+</div>

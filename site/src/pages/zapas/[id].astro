@@ -1,0 +1,109 @@
+---
+// Detail zápasu: výsledková tabule série, jednotlivé hry (strany, sestavy, zákazy, statistiky) a vzájemné zápasy.
+// U zápasu, který se teprve hraje, soupisky obou týmů a kde ho sledovat česky.
+import Base from '../../layouts/Base.astro';
+import VNode from '../../components/VNode.astro';
+import { loadData, allTeams } from '../../lib/data';
+import { leagueName, leagueShort } from '../../../../shared/leagues';
+import { blockCs, formatDate, formatTime } from '../../../../shared/format';
+import { matchRow, rosterList } from '../../../../shared/render';
+import { gameCard, matchHero, seriesStrip, type KnownPlayer } from '../../../../shared/match-detail';
+import { h } from '../../../../shared/vnode';
+import { icon } from '../../../../shared/icons';
+import type { Match } from '../../../../shared/types';
+
+export function getStaticPaths() {
+  const seen = new Set<string>();
+  return Object.values(loadData().schedule)
+    .flat()
+    .filter((m): m is Match => !!m && /^\d+$/.test(m.id) && !seen.has(m.id) && !!seen.add(m.id))
+    .map((m) => ({ params: { id: m.id }, props: { match: m } }));
+}
+
+const { match: m } = Astro.props as { match: Match };
+const data = loadData();
+const [a, b] = m.teams;
+const done = m.state === 'completed';
+const games = data.matchDetails[m.id] ?? [];
+const teams = allTeams();
+const players = new Map<string, KnownPlayer>();
+for (const t of teams) for (const p of t.players) players.set(p.handle.toLowerCase(), { slug: p.slug, country: p.country });
+const rosters = [a, b].map((t) => teams.find((x) => x.slug === t.slug)).filter((t) => !!t);
+const pair = [a.slug ?? a.code, b.slug ?? b.code].sort().join('|');
+const h2h = Object.values(data.schedule)
+  .flat()
+  .filter((x): x is Match => !!x && x.id !== m.id && [x.teams[0].slug ?? x.teams[0].code, x.teams[1].slug ?? x.teams[1].code].sort().join('|') === pair)
+  .sort((x, y) => y.startTime.localeCompare(x.startTime))
+  .slice(0, 6);
+const league = leagueName(m.league);
+const when = `${formatDate(m.startTime)} ${formatTime(m.startTime)}`;
+const streamer = data.streamers[m.league]?.[0];
+const title = `${a.code} – ${b.code} · ${league}`;
+// Bez skóre: popis se ukazuje ve vyhledávači a při sdílení, výsledek by tam prozradil.
+const description = done
+  ? `${a.name} proti ${b.name} (${league}, ${when}): výsledek série a průběh jednotlivých her, sestavy, zákazy a statistiky.`
+  : `${a.name} proti ${b.name} (${league}): začátek ${when} našeho času, soupisky obou týmů.`;
+---
+<Base title={title} description={description} nav="none">
+  <div class="page-head">
+    <div>
+      <p class="kicker">
+        <a href={`/liga/${leagueShort(m.league)}/`}>{league}</a>
+        {m.block && <span>{blockCs(m.block)}</span>}
+        <span>Bo{m.bestOf}</span>
+        <time datetime={m.startTime}>{when}</time>
+      </p>
+      <h1>{a.name} <span class="vs">–</span> {b.name}</h1>
+    </div>
+  </div>
+
+  <section class="slab mh-slab" aria-label="Výsledek série">
+    <VNode node={matchHero(m, data.now)} />
+    {!done && streamer && <p class="mh-watch"><a href={streamer.url} rel="noopener" target="_blank">Česky obvykle: {streamer.name}</a></p>}
+  </section>
+
+  {
+    done && games.length > 0 && (
+      <div class="spoil-box" data-spoiler="1">
+        <div class="sp-block">
+          <VNode node={seriesStrip(games)} />
+          <div class="games">
+            <VNode node={games.map((g) => gameCard(g, m, players))} />
+          </div>
+        </div>
+        <button class="sp-reveal btn btn--primary" type="button" data-action="reveal"><VNode node={icon('eye')} />Odkrýt průběh zápasu</button>
+      </div>
+    )
+  }
+  {
+    done && games.length === 0 && (
+      <section class="block">
+        <h2>Jednotlivé hry</h2>
+        <p class="empty">Podrobnosti her k tomuto zápasu nemáme. Zdroj je dodává jen pro zápasy z posledních týdnů.</p>
+      </section>
+    )
+  }
+  {
+    !done && rosters.length > 0 && (
+      <div class="entity">
+        {rosters.map((t) => (
+          <section class="block">
+            <h2><a href={`/tym/${t.slug}/`}>{t.name}</a></h2>
+            {t.players.length ? <VNode node={rosterList(t)} /> : <p class="empty">Soupiska zatím nezveřejněna.</p>}
+          </section>
+        ))}
+      </div>
+    )
+  }
+
+  <section class="block block--h2h">
+    <h2>Vzájemné zápasy</h2>
+    {
+      h2h.length ? (
+        <VNode node={h('div', { class: 'mlist' }, ...h2h.map((x) => matchRow(x, { now: data.now, showDate: true, showLeague: x.league !== m.league })))} />
+      ) : (
+        <p class="empty">Jiný zápas těchto týmů v datech není.</p>
+      )
+    }
+  </section>
+</Base>

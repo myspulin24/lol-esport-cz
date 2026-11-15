@@ -1,0 +1,92 @@
+# Každých 15 minut: stáhne data, postaví web a nahraje změny na Forpsi. Nikdo nic nepíše ručně.
+# Stav mezi běhy (poslední platná data a historie přestupů) se ukládá do větve „data“ (jeden commit, přepisuje se).
+name: Data a nasazení
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+    - cron: '17 4 1 * *' # jednou měsíčně: udržet plánované spouštění (GitHub ho po 60 dnech bez aktivity vypíná)
+  workflow_dispatch:
+    inputs:
+      force_all:
+        description: 'Stáhnout i Leaguepedii (jinak jen v první čtvrthodině každé hodiny)'
+        type: boolean
+        default: false
+
+# Běhy se nepředbíhají a nepřerušují: rozpracovaný deploy vždy doběhne.
+concurrency:
+  group: pipeline
+  cancel-in-progress: false
+
+permissions:
+  contents: write # push do větve data
+  actions: write # měsíční udržovací krok
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Udržet plánované spouštění
+        if: github.event.schedule == '17 4 1 * *'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh api -X PUT "repos/${GITHUB_REPOSITORY}/actions/workflows/pipeline.yml/enable"
+
+      - name: Načíst cache z větve data
+        run: |
+          mkdir -p cache
+          if git fetch --depth=1 origin data 2>/dev/null; then
+            git archive FETCH_HEAD | tar -x -C cache
+            ls -la cache
+          else
+            echo "Větev data zatím neexistuje (první běh), začíná se od nuly."
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Stáhnout data
+        env:
+          FORCE_ALL: ${{ inputs.force_all && '1' || '' }}
+          HC_LOLESPORTS: ${{ secrets.HC_LOLESPORTS }}
+          HC_LEAGUEPEDIA: ${{ secrets.HC_LEAGUEPEDIA }}
+          PUBLIC_GOATCOUNTER: ${{ vars.PUBLIC_GOATCOUNTER }}
+        run: npm run data
+
+      - name: Postavit web
+        env:
+          PUBLIC_GOATCOUNTER: ${{ vars.PUBLIC_GOATCOUNTER }}
+        run: npm run build
+
+      # Chyba nasazení nesmí shodit běh (data se uloží a příští běh to zkusí znovu);
+      # deploy-cli vypíše upozornění, které je vidět v přehledu běhu.
+      - name: Nasadit na Forpsi
+        continue-on-error: true
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_DIR: ${{ vars.FTP_DIR }}
+          HC_DEPLOY: ${{ secrets.HC_DEPLOY }}
+        run: npm run deploy
+
+      - name: Uložit cache do větve data
+        if: always() && hashFiles('cache/*.json') != ''
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd cache
+          rm -f *.tmp-*
+          git init -q -b data
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- *.json
+          git commit -q -m "data $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -q --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" data

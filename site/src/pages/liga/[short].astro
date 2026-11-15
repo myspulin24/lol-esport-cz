@@ -1,0 +1,61 @@
+---
+import Base from '../../layouts/Base.astro';
+import VNode from '../../components/VNode.astro';
+import AddToDash from '../../components/AddToDash.astro';
+import { loadData } from '../../lib/data';
+import { TRACKED_LEAGUES, tournamentName, type TrackedLeague } from '../../../../shared/leagues';
+import { matchRow, standingsTable, transferRow, filterTransfers, countdownBody, freshness, bracketView } from '../../../../shared/render';
+import { h } from '../../../../shared/vnode';
+import { stageCs } from '../../../../shared/format';
+
+export function getStaticPaths() {
+  return TRACKED_LEAGUES.map((l) => ({ params: { short: l.short }, props: { league: l } }));
+}
+const { league } = Astro.props as { league: TrackedLeague };
+const data = loadData();
+const info = data.leagues.find((l) => l.slug === league.slug);
+const matches = data.schedule[league.slug] ?? [];
+const next = matches.filter((m) => m.state !== 'completed' && Date.parse(m.startTime) > data.now.getTime() - 6 * 3_600_000).slice(0, 6);
+const last = matches.filter((m) => m.state === 'completed').sort((a, b) => b.startTime.localeCompare(a.startTime)).slice(0, 8);
+const standings = data.standings[league.slug];
+const transfers = filterTransfers(data.transfers ?? [], league.slug).slice(0, 10);
+const tournament = data.tournaments.filter((t) => t.league === league.slug).sort((a, b) => b.startDate.localeCompare(a.startDate))[0];
+const bracket = tournament ? data.brackets[tournament.slug] : undefined;
+const streamers = data.streamers[league.slug];
+---
+<Base title={league.name} nav="none" description={`${league.name}: zápasy v našem čase, výsledky, tabulka a přestupy.`}>
+  <div class="page-head">
+    {info?.image && <img class="logo" src={info.image} alt="" width="56" height="56" loading="lazy" />}
+    <div>
+      <h1>{league.name}</h1>
+      <p class="id-line">{league.region}{info?.currentTournament && <span>· {tournamentName(league.name, info.currentTournament)}</span>}</p>
+    </div>
+  </div>
+  <div class="entity">
+    <section class="block block--wide">
+      <h2>Příští zápasy <VNode node={freshness('lolesports', data.meta, data.now)} /></h2>
+      {next.length ? <VNode node={h('div', { class: 'mlist' }, ...next.map((m) => matchRow(m, { now: data.now, showDate: true, streamers })))} /> : <VNode node={countdownBody(league.slug, data)} />}
+    </section>
+    {bracket && (
+      <section class="block block--wide">
+        <h2>Pavouk · {bracket.name}</h2>
+        <VNode node={bracketView(bracket, data.now)} />
+      </section>
+    )}
+    <section class="block">
+      <h2>Poslední výsledky</h2>
+      {last.length ? <VNode node={h('div', { class: 'mlist' }, ...last.map((m) => matchRow(m, { now: data.now, showDate: true })))} /> : <p class="empty">Zatím žádné výsledky.</p>}
+      <a class="tile-more" href={`/vysledky/?l=${league.short}`}>Přehled výsledků</a>
+    </section>
+    <section class="block">
+      <h2>Tabulka{standings && <span class="h-sub"> · {stageCs(standings.stage)}</span>}</h2>
+      {standings && standings.rows.length ? <VNode node={standingsTable(standings)} /> : <p class="empty">Tabulka bude po prvním kole.</p>}
+    </section>
+    <section class="block block--wide">
+      <h2>Přestupy <VNode node={freshness('leaguepedia', data.meta, data.now)} /></h2>
+      {transfers.length ? <VNode node={h('ul', { class: 'trlist' }, ...transfers.map((t) => transferRow(t, data.now)))} /> : <p class="empty">Za posledních 45 dní žádné změny v {league.name}.</p>}
+      <a class="tile-more" href={`/prestupy/?f=${league.slug}`}>Všechny přestupy {league.name}</a>
+    </section>
+    <AddToDash type={league.group === 'international' ? 'today' : 'results'} param={league.slug} label={`Přidat ${league.name} na můj dashboard`} ics={`/ics/liga-${league.short}.ics`} />
+  </div>
+</Base>

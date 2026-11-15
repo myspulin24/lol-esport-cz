@@ -1,0 +1,51 @@
+---
+import Base from '../../layouts/Base.astro';
+import VNode from '../../components/VNode.astro';
+import AddToDash from '../../components/AddToDash.astro';
+import { loadData, allTeams } from '../../lib/data';
+import { leagueName, leagueShort } from '../../../../shared/leagues';
+import { matchRow, rosterSwitch, transferRow, czskTags, nextMatchOf, lastMatchesOf, freshness } from '../../../../shared/render';
+import { h } from '../../../../shared/vnode';
+import { teamKey } from '../../../../shared/team-key';
+import type { Team } from '../../../../shared/types';
+
+export function getStaticPaths() {
+  return allTeams().map((t) => ({ params: { slug: t.slug }, props: { team: t } }));
+}
+const { team } = Astro.props as { team: Team };
+const data = loadData();
+const all = Object.values(data.schedule).flat();
+const next = nextMatchOf(team.slug, data, data.now);
+const last = lastMatchesOf(team.slug, all, 6);
+const key = teamKey(team.name);
+const transfers = (data.transfers ?? []).filter((t) => [t.from, t.to].some((x) => x && teamKey(x) === key)).slice(0, 10);
+const flags = [...new Set(team.players.map((p) => p.country).filter((x): x is 'CZ' | 'SK' => x === 'CZ' || x === 'SK'))];
+---
+<Base title={team.name} description={`${team.name} (${team.code}): soupiska, příští zápas, výsledky a přestupy.`}>
+  <div class="page-head">
+    {team.image && <img class="logo" src={team.image} alt="" width="56" height="56" loading="lazy" />}
+    <div>
+      <h1>{team.name}</h1>
+      <p class="id-line"><span>{team.code}</span><a href={`/liga/${leagueShort(team.league)}/`}>{leagueName(team.league)}</a><VNode node={czskTags(flags)} /></p>
+    </div>
+  </div>
+  <div class="entity">
+    <section class="block block--wide">
+      <h2>Příští zápas <VNode node={freshness('lolesports', data.meta, data.now)} /></h2>
+      {next ? <VNode node={h('div', { class: 'mlist' }, matchRow(next, { now: data.now, showDate: true, streamers: data.streamers[next.league] }))} /> : <p class="empty">Další zápas zatím není v rozpisu.</p>}
+    </section>
+    <section class="block block--wide">
+      <h2>Soupiska</h2>
+      <VNode node={rosterSwitch(team, data)} />
+    </section>
+    <section class="block">
+      <h2>Poslední výsledky</h2>
+      {last.length ? <VNode node={h('div', { class: 'mlist' }, ...last.map((m) => matchRow(m, { now: data.now, showDate: true, showLeague: m.league !== team.league })))} /> : <p class="empty">Zatím žádné výsledky.</p>}
+    </section>
+    <section class="block">
+      <h2>Přestupy <VNode node={freshness('leaguepedia', data.meta, data.now)} /></h2>
+      {transfers.length ? <VNode node={h('ul', { class: 'trlist' }, ...transfers.map((t) => transferRow(t, data.now)))} /> : <p class="empty">Za posledních 45 dní žádné změny v týmu.</p>}
+    </section>
+    <AddToDash type="roster" param={team.slug} label={`Přidat ${team.code} na můj dashboard`} ics={`/ics/tym-${team.slug}.ics`} />
+  </div>
+</Base>

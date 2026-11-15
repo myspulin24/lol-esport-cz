@@ -1,0 +1,31 @@
+---
+import Base from '../layouts/Base.astro';
+import VNode from '../components/VNode.astro';
+import { loadData } from '../lib/data';
+import { czskRow, freshness } from '../../../shared/render';
+import { LEAGUE_BY_SLUG } from '../../../shared/leagues';
+import { h } from '../../../shared/vnode';
+
+const data = loadData();
+const all = data.czsk ?? [];
+const groups = [
+  { title: 'Ve sledovaných ligách', items: all.filter((p) => p.league && LEAGUE_BY_SLUG.get(p.league)?.group === 'major') },
+  { title: 'Česko-slovenská scéna (Hitpoint Masters)', items: all.filter((p) => p.league === 'hitpoint_masters') },
+  { title: 'Další týmy v Evropě a jinde', items: all.filter((p) => !p.league) },
+];
+---
+<Base title="Češi a Slováci" nav="czsk" description="Čeští a slovenští hráči LoL esportu: v jakém týmu a lize hrají.">
+  <div class="page-head">
+    <h1>Češi a Slováci ve světě</h1>
+    <p>{all.length} aktivních hráčů podle Leaguepedie.</p>
+    <VNode node={freshness('leaguepedia', data.meta, data.now)} />
+    <div class="actions"><a class="btn btn--ghost" href="/ics/cesi.ics">Zápasy týmů s Čechy do kalendáře</a></div>
+  </div>
+  {!all.length && <p class="empty">Seznam se načte s další aktualizací z Leaguepedie.</p>}
+  {groups.filter((g) => g.items.length).map((g) => (
+    <section class="block">
+      <h2>{g.title}</h2>
+      <VNode node={h('ul', { class: 'czlist cols-2' }, ...g.items.map(czskRow))} />
+    </section>
+  ))}
+</Base>

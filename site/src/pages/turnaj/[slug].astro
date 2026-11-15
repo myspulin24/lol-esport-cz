@@ -1,0 +1,39 @@
+---
+import Base from '../../layouts/Base.astro';
+import VNode from '../../components/VNode.astro';
+import AddToDash from '../../components/AddToDash.astro';
+import { loadData } from '../../lib/data';
+import { leagueShort } from '../../../../shared/leagues';
+import { bracketView, matchRow, freshness } from '../../../../shared/render';
+import { formatDate } from '../../../../shared/format';
+import { h } from '../../../../shared/vnode';
+
+export function getStaticPaths() {
+  const data = loadData();
+  return data.tournaments.filter((t) => data.brackets[t.slug]).map((t) => ({ params: { slug: t.slug }, props: { slug: t.slug } }));
+}
+const { slug } = Astro.props as { slug: string };
+const data = loadData();
+const t = data.tournaments.find((x) => x.slug === slug)!;
+const bracket = data.brackets[slug]!;
+const matches = (data.schedule[t.league] ?? []).filter((m) => m.tournament === slug).sort((a, b) => b.startTime.localeCompare(a.startTime)).slice(0, 20);
+---
+<Base title={bracket.name} description={`${bracket.name}: pavouk play-off a výsledky.`}>
+  <div class="page-head">
+    <div>
+      <h1>{bracket.name}</h1>
+      <p class="id-line"><span>{formatDate(`${t.startDate}T12:00:00Z`)} – {formatDate(`${t.endDate}T12:00:00Z`)}</span><a href={`/liga/${leagueShort(t.league)}/`}>Stránka soutěže</a></p>
+    </div>
+  </div>
+  <div class="entity">
+    <section class="block block--wide">
+      <h2>Play-off <VNode node={freshness('lolesports', data.meta, data.now)} /></h2>
+      <VNode node={bracketView(bracket, data.now)} />
+    </section>
+    <section class="block block--wide">
+      <h2>Zápasy turnaje</h2>
+      {matches.length ? <VNode node={h('div', { class: 'mlist' }, ...matches.map((m) => matchRow(m, { now: data.now, showDate: true })))} /> : <p class="empty">Zatím žádné zápasy.</p>}
+    </section>
+    <AddToDash type="bracket" param={slug} label="Přidat pavouk na můj dashboard" />
+  </div>
+</Base>

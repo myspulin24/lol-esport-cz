@@ -1,0 +1,18 @@
+---
+// Vykreslí sdílený strom (shared/vnode.ts) přes Astro výrazy: texty se escapují automaticky (R4).
+import { cleanAttrs, isAllowedTag, type Child } from '../../../shared/vnode';
+
+interface Props {
+  node: Child | Child[];
+}
+const { node } = Astro.props;
+const list: Child[] = Array.isArray(node) ? node : [node];
+---
+{list.map((n) => {
+  if (n === null || n === undefined || n === false) return null;
+  if (typeof n === 'string' || typeof n === 'number') return n;
+  if (!isAllowedTag(n.tag)) return null;
+  const Tag = n.tag as any;
+  const attrs = cleanAttrs(n.attrs);
+  return <Tag {...attrs}><Astro.self node={n.children} /></Tag>;
+})}

@@ -1,0 +1,79 @@
+---
+import Base from '../layouts/Base.astro';
+import VNode from '../components/VNode.astro';
+import { loadData } from '../lib/data';
+import { transferRow, freshness } from '../../../shared/render';
+import { TRACKED_LEAGUES } from '../../../shared/leagues';
+import { h } from '../../../shared/vnode';
+
+const data = loadData();
+const list = data.transfers ?? [];
+const counts = { confirmed: list.filter((t) => t.status === 'confirmed').length, rumor: list.filter((t) => t.status === 'rumor').length };
+const leagueFilters = TRACKED_LEAGUES.filter((l) => l.group !== 'international' && list.some((t) => t.fromLeague === l.slug || t.toLeague === l.slug));
+---
+<Base title="Přestupy" nav="transfers" description="Přestupy a drby z LoL esportu za posledních 45 dní: potvrzené změny soupisek i neoficiální zprávy se zdrojem.">
+  <div class="page-head">
+    <h1>Přestupy</h1>
+    <p>{counts.confirmed} potvrzených, {counts.rumor} neoficiálních za posledních 45 dní. Jen hráči, bez trenérů a štábu.</p>
+    <VNode node={freshness('leaguepedia', data.meta, data.now)} />
+  </div>
+  <div class="filters" role="group" aria-label="Filtr přestupů" data-tr-filters>
+    <button type="button" data-f="all" aria-pressed="true">Všechny ligy</button>
+    <button type="button" data-f="czsk" aria-pressed="false">Češi a Slováci</button>
+    {leagueFilters.map((l) => <button type="button" data-f={l.slug} aria-pressed="false">{l.name}</button>)}
+  </div>
+  <div class="filters" role="group" aria-label="Stav" data-tr-status>
+    <button type="button" data-s="any" aria-pressed="true">Vše</button>
+    <button type="button" data-s="confirmed" aria-pressed="false">Potvrzené</button>
+    <button type="button" data-s="rumor" aria-pressed="false">Neoficiální</button>
+  </div>
+  {list.length ? (
+    <div class="slab"><VNode node={h('ul', { class: 'trlist', 'data-tr-list': '1' }, ...list.map((t) => transferRow(t, data.now)))} /></div>
+  ) : (
+    <p class="empty">Za posledních 45 dní žádné změny. Přestupy se objeví, jakmile je zdroj zveřejní.</p>
+  )}
+  <p class="more-row" data-tr-more-row hidden><button class="btn" type="button" data-tr-more>Zobrazit dalších <span data-tr-more-n>50</span></button><span class="more-info" data-tr-more-info></span></p>
+  <p class="empty" data-tr-empty hidden>Pro tento filtr nic nenalezeno. <button class="btn btn--sm" type="button" data-f-reset>Zobrazit všechny ligy</button></p>
+  <script>
+    const PAGE = 50;
+    let league = 'all';
+    let status = 'any';
+    let limit = PAGE;
+    const apply = () => {
+      let matched = 0;
+      document.querySelectorAll<HTMLElement>('[data-tr-list] > li').forEach((li) => {
+        const okL = league === 'all' || (league === 'czsk' ? li.dataset.cz === '1' : (li.dataset.l ?? '').split(' ').includes(league));
+        const okS = status === 'any' || li.dataset.s === status;
+        const ok = okL && okS;
+        if (ok) matched++;
+        li.hidden = !ok || matched > limit;
+      });
+      const empty = document.querySelector<HTMLElement>('[data-tr-empty]');
+      if (empty) empty.hidden = matched > 0;
+      // Stránkování: stovky položek by se na mobilu nedaly projít.
+      const moreRow = document.querySelector<HTMLElement>('[data-tr-more-row]');
+      if (moreRow) {
+        const rest = matched - limit;
+        moreRow.hidden = rest <= 0;
+        const n = moreRow.querySelector('[data-tr-more-n]');
+        if (n) n.textContent = String(Math.min(PAGE, Math.max(rest, 0)));
+        const info = moreRow.querySelector('[data-tr-more-info]');
+        if (info) info.textContent = `zobrazeno ${Math.min(limit, matched)} z ${matched}`;
+      }
+      document.querySelectorAll('[data-f]').forEach((b) => b.setAttribute('aria-pressed', String((b as HTMLElement).dataset.f === league)));
+      document.querySelectorAll('[data-s]').forEach((b) => b.setAttribute('aria-pressed', String((b as HTMLElement).dataset.s === status)));
+    };
+    const q = new URLSearchParams(location.search).get('f');
+    if (q) league = q;
+    document.addEventListener('click', (e) => {
+      const t = (e.target as Element).closest<HTMLElement>('[data-f], [data-s], [data-f-reset], [data-tr-more]');
+      if (!t || t.closest('li')) return;
+      limit = t.hasAttribute('data-tr-more') ? limit + PAGE : PAGE;
+      if (t.dataset.f) league = t.dataset.f;
+      if (t.dataset.s) status = t.dataset.s;
+      if (t.hasAttribute('data-f-reset')) (league = 'all'), (status = 'any');
+      apply();
+    });
+    apply();
+  </script>
+</Base>

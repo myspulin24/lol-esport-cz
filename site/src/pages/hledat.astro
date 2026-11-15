@@ -1,0 +1,19 @@
+---
+// Hledání na vlastní stránce (na mobilu ze spodní navigace): výsledky se ukazují rovnou při psaní.
+import Base from '../layouts/Base.astro';
+import VNode from '../components/VNode.astro';
+import { icon } from '../../../shared/icons';
+---
+<Base title="Hledat" nav="search" description="Hledat tým, hráče, ligu nebo turnaj.">
+  <div class="page-head"><h1>Hledat</h1></div>
+  <form class="search search--page" action="/hledat/" role="search" data-search="page">
+    <VNode node={icon('search')} />
+    <label class="sr-only" for="q2">Tým, hráč, liga nebo turnaj</label>
+    <input id="q2" name="q" type="text" inputmode="search" enterkeyhint="search" placeholder="Tým, hráč nebo liga" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="q2-list" aria-autocomplete="list" autofocus />
+  </form>
+  <div class="slab search-page">
+    <div class="search-panel search-panel--page" id="q2-list" role="listbox" aria-label="Výsledky hledání" data-search-panel="page">
+      <p class="sr-empty">Začni psát: kód týmu (G2), název týmu, přezdívku hráče nebo ligu.</p>
+    </div>
+  </div>
+</Base>

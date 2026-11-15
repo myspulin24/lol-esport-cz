@@ -1,0 +1,43 @@
+---
+import Base from '../layouts/Base.astro';
+import VNode from '../components/VNode.astro';
+import { loadData } from '../lib/data';
+import { resultsView, PERIOD_LABEL, type Period } from '../../../shared/results';
+import { DEFAULT_RESULTS_LEAGUES, TRACKED_LEAGUES } from '../../../shared/leagues';
+import { icon } from '../../../shared/icons';
+
+const data = loadData();
+const nodes = resultsView(DEFAULT_RESULTS_LEAGUES, 'week', data);
+const periods = Object.entries(PERIOD_LABEL) as Array<[Period, string]>;
+const picker = TRACKED_LEAGUES.map((l) => ({ slug: l.slug, name: l.name, checked: DEFAULT_RESULTS_LEAGUES.includes(l.slug) }));
+---
+<Base title="Výsledky" nav="results" description="Výsledky LCK, LPL, LEC, LCS a dalších lig i mezinárodních turnajů v našem čase, až po jednotlivé hry.">
+  <div class="page-head">
+    <h1>Výsledky</h1>
+  </div>
+  <div class="res-controls">
+    <button class="btn sheet-btn" type="button" data-action="sheet" aria-haspopup="dialog"><span>Ligy (<span data-league-count>{DEFAULT_RESULTS_LEAGUES.length}</span>)</span><VNode node={icon('down', 'ic ic-s')} /></button>
+    <fieldset class="league-picker" style="border:0;padding:0;margin:0">
+      <legend class="sr-only">Ligy v přehledu</legend>
+      {picker.map((l) => <label><input type="checkbox" value={l.slug} data-league-box checked={l.checked} />{l.name}</label>)}
+    </fieldset>
+    <div class="seg" role="group" aria-label="Období">
+      {periods.map(([k, label]) => <button type="button" data-period={k} aria-pressed={k === 'week' ? 'true' : 'false'}>{label}</button>)}
+    </div>
+  </div>
+  <div data-results>
+    <VNode node={nodes} />
+  </div>
+  <div class="sheet" data-sheet role="dialog" aria-label="Výběr lig" hidden>
+    <div class="tile-head"><h2>Ligy v přehledu</h2><button class="tool" type="button" data-action="sheet-close" aria-label="Zavřít výběr lig"><VNode node={icon('close')} /></button></div>
+    <fieldset class="league-picker" style="border:0;padding:0">
+      <legend class="sr-only">Ligy v přehledu</legend>
+      {picker.map((l) => <label><input type="checkbox" value={l.slug} data-league-box checked={l.checked} />{l.name}</label>)}
+    </fieldset>
+    <button class="btn btn--primary" type="button" data-action="sheet-close">Hotovo</button>
+  </div>
+  <script>
+    import { initResults } from '../client/results';
+    initResults();
+  </script>
+</Base>

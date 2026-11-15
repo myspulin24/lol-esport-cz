@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.astro/
+cache/*.tmp-*
+site/public/data/**/*.tmp-*
+test-results/
+playwright-report/
+.gstack/
+# generovaná data: v CI je vyrobí pipeline, cache/ žije ve větvi „data“
+site/public/data/
+cache/
