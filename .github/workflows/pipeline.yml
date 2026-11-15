@@ -50,6 +50,9 @@ jobs:
           node-version: 22
           cache: npm
 
+      # Stejná verze npm jako při vývoji: zámek balíčků vznikl v npm 11 a starší npm ho na Linuxu odmítne.
+      - run: npm install -g npm@11.6.2
+
       - run: npm ci
 
       - name: Stáhnout data
