@@ -1,7 +1,8 @@
 # LoL esport česky (lol.godmike.cz)
 
 Statický web (Astro) s daty z lolesports a Leaguepedie. GitHub Actions ho každých 15 minut přestaví a nahraje
-přes FTPS na Forpsi. Podrobnosti: `README.md` (provoz), `DESIGN.md` (vzhled), `TODOS.md` (odložená práce).
+přes FTPS na Forpsi; běh spouští vnější služba cron-job.org (plánovač GitHubu je jen hodinová záloha).
+Podrobnosti: `README.md` (provoz), `DESIGN.md` (vzhled), `TODOS.md` (odložená práce).
 
 ## Jak se na projektu pracuje
 

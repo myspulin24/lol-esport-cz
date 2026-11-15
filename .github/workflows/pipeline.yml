@@ -1,12 +1,14 @@
 # Každých 15 minut: stáhne data, postaví web a nahraje změny na Forpsi. Nikdo nic nepíše ručně.
+# Spouští ho vnější služba cron-job.org (volá workflow_dispatch přes API GitHubu): plánovač GitHubu se u tohoto
+# repozitáře nerozběhl a obecně běhy zpožďuje a vynechává. Plán níže je jen hodinová záloha.
 # Stav mezi běhy (poslední platná data a historie přestupů) se ukládá do větve „data“ (jeden commit, přepisuje se).
 name: Data a nasazení
 
 on:
   schedule:
-    # Každých 15 minut, schválně mimo celou hodinu a čtvrthodiny: v těch časech má GitHub nejvíc práce
-    # a plánované běhy zpožďuje nebo vynechává.
-    - cron: '7,22,37,52 * * * *'
+    # Záloha pro případ, že vnější spouštěč vypadne. Schválně mimo celou hodinu a čtvrthodiny: v těch časech
+    # má GitHub nejvíc práce a spouští vnější služba.
+    - cron: '37 * * * *'
     - cron: '17 4 1 * *' # jednou měsíčně: udržet plánované spouštění (GitHub ho po 60 dnech bez aktivity vypíná)
   workflow_dispatch:
     inputs:

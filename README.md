@@ -30,7 +30,7 @@ Při úpravách vzhledu stačí `npm run dev` (web se obnovuje sám).
 ## Jak to běží
 
 ```
-GitHub Actions, každých 15 min (.github/workflows/pipeline.yml)
+GitHub Actions, každých 15 min (.github/workflows/pipeline.yml), spouští cron-job.org
   1. npm run data    lolesports API (rozpis, výsledky, tabulky, pavouky, soupisky)
                      Leaguepedia jednou za hodinu (přestupy, drby, národnost hráčů, hry v sérii)
                      → při výpadku zdroje se použijí poslední platná data, web běží dál
@@ -38,6 +38,12 @@ GitHub Actions, každých 15 min (.github/workflows/pipeline.yml)
   3. npm run deploy  FTPS na Forpsi, nahraje jen změněné soubory (manifest SHA-256)
   4. stav mezi běhy  větev „data“ v repozitáři (poslední data, historie přestupů)
 ```
+
+**Kdo běh spouští:** služba cron-job.org každých 15 minut zavolá API GitHubu (`workflow_dispatch`). Vlastní
+plánovač GitHubu se u tohoto repozitáře nerozběhl (a obecně běhy zpožďuje a vynechává), proto je ve workflow
+jen jako hodinová záloha. Úloha na cron-job.org se jmenuje „Lol esport - spustit GitHub“ a přihlašuje se
+tokenem `lol-godmike-spoustec` (GitHub → Settings → Developer settings → Fine-grained tokens; jen tento
+repozitář, právo Actions: Read and write, bez data vypršení). Token je uložený jen na cron-job.org.
 
 Nasazení je navržené tak, aby nic nerozbilo běžící web: soubory se nahrávají pod dočasným jménem a pak
 přejmenují, `data/meta.json` jde vždy poslední, přerušený běh příští běh dorovná, mazání starých souborů
@@ -69,7 +75,12 @@ se zastaví, pokud by nový build byl o víc než 20 % menší než ten minulý.
 
 5. **GitHub → Actions → „Data a nasazení“ → Run workflow** (zaškrtněte Leaguepedii). První nasazení nahrává
    ~2 200 souborů; za 7 minut se všechno nestihne, zbytek dorovnají další běhy samy (web je mezitím použitelný).
-6. Hotovo. Dál se web obnovuje sám každých 15 minut. Když nasazení selže (např. špatné heslo), běh zůstane
+6. **Spouštěč:** na cron-job.org založte úlohu, která každých 15 minut pošle `POST` na
+   `https://api.github.com/repos/<účet>/<repozitář>/actions/workflows/pipeline.yml/dispatches` s tělem
+   `{"ref":"main"}` a hlavičkami `Authorization: Bearer <token>`, `Accept: application/vnd.github+json`,
+   `Content-Type: application/json`. Token: fine-grained, jen tento repozitář, Actions: Read and write.
+   Zkušební spuštění má vrátit `204 No Content`.
+7. Hotovo. Dál se web obnovuje sám každých 15 minut. Když nasazení selže (např. špatné heslo), běh zůstane
    zelený s upozorněním „Deploy“ v přehledu a data se příště nahrají znovu.
 
 Ruční nasazení z počítače (PowerShell):
@@ -123,6 +134,10 @@ nasazení přestane fungovat, přijde e-mail. Na webu se po 6 hodinách bez čer
 - **„Deploy selhal: 530 Login authentication failed“, ale z počítače se stejnými údaji přihlášení funguje**:
   Forpsi odmítá FTP přihlášení ze země, odkud GitHub běží (USA). Povolte ji v administraci Forpsi
   (krok 2 výše). Odmítnuté pokusy jsou vidět v FTP logu tamtéž.
+- **Web se přestal obnovovat (lišta o starých datech)**: na cron-job.org se podívejte do historie úlohy.
+  `401` = token byl smazán nebo změněn (vytvořte nový a vložte ho do hlavičky `Authorization`), `404` = token
+  nemá právo Actions: Read and write k tomuto repozitáři. Mezitím jde běh spustit ručně: GitHub → Actions →
+  „Data a nasazení“ → Run workflow.
 - **Push do větve data selže**: Settings → Actions → General → Workflow permissions → Read and write.
 
 ## Zdroje a licence
