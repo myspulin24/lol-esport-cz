@@ -17,6 +17,8 @@ Bez výslovného pokynu necommitovat, nepushovat a nenasazovat.
   deploy na ně nesmí sáhnout (hlídá to `ALLOWED_TARGETS` v `pipeline/deploy.ts`).
 - Přístupy k FTP jsou jen v GitHub Secrets (`FTP_HOST`, `FTP_USER`, `FTP_PASSWORD`), nikdy v repozitáři.
 - Před zásahem na server nejdřív `npm run deploy -- --check` (jen čte).
+- Do větve `data` zapisuje jen automatický běh (robot). Ručně do ní nepushovat a nezakládat z ní pull request:
+  jsou v ní jen uložená data, ne kód, a po ručním pushi GitHub majiteli ukazuje výzvu „Compare & pull request“.
 - Texty webu jsou česky. Vzhled a pravidla animací drží `DESIGN.md`; při změně vzhledu ho aktualizovat.
 - Obsah z cizích zdrojů se nikdy nevkládá jako HTML (`shared/vnode.ts`, žádné `innerHTML`).
 
