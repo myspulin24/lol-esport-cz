@@ -1,0 +1,5 @@
+# Konce řádků všude LF: sestavení na Windows i na GitHubu (Linux) pak dává stejné soubory.
+* text=auto eol=lf
+*.png binary
+*.ico binary
+*.woff2 binary
